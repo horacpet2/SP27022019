@@ -1,0 +1,35 @@
+\Nadpis{Analýza požadavků}
+
+Zadáním projektu je vytvořit systém pro správu zdrojů (majetku). Z požadavků vyplývá nutnost rozčlenění na menší samostatné podsystémy, které vzájemně komunikují:
+
+\vskip 4mm
+\bod {Pokladní systém}
+\bod {Účetní systém}
+\vskip 4mm 
+
+Pokladní systém slouží k evidování menších tržeb, účetní systém naproti tomu slouží ke správě zdrojů a správě větších tržeb. Veškeré údaje o skladových zásobách a zdrojích jsou uloženy v databázi na kterou jsou oba systémy napojeny. Toto řešení dále připravuje celý systém na napojení do webového eshopu a další možnosti zprávy.
+
+\Sekce{Analýza požadavků pokladního systému}
+Účelem pokladního systému je evidovat drobné tržby a pomáhá zrychlit, usnadnit proces prodeje a manageovat skladové zásoby.
+
+Obsluha nejprve inicializuje proces prodeje (připraví systém pro zadávání položek do systému). Vstup do dat pro zaplacení a úpravu hodnot skladových zásob je možné zadat dvěmy způsoby. Prvním způsobem je příručním skenerem, který naskenuje štítek s čárovým kódem na produktu, který obsahuje data v určitém formátu. Druhou možností je ručně prostřednictvím vstupního pole grafického rozhraní. Tento způsob je zde pro případ poruchy příručního skeneru. Samozřejmostí je dodatečného zadávní počtu k danému produktu nebo vymazání produktu po zadání v případě změny požadavků při nákupu. Po zadání množství se přejde k výpočtu celkové ceny za zboží, tisk účtenky a výpčet peněz na vrácení. Po výpočtu ceny je možné opakovaně tisknout účtenky pro případ, že by tisk neproběhl vpořádku a nebo byla potřeba více kopií jedné účtenky. Následuje úprava dat v centrální databázi a pokud vše proběhne vpořádku dojde k odeslání dat do EET.
+
+V jakémkoli kroku prodeje je možné transakci zrušit. Zrušení transakce je nutné následně potvrdit dodatečnou hláškou v případě omylu.
+
+\centerline{\pdfrefximage 1}
+
+V případě, že není databázové připojení k dispozici, nelze provádět transakce, z důvodů, že v databázi jsou uloženy informace o prodávaném zboží (kód, cena, název,...) a současně nelze ukládat data o provedených transakcích. Tento stav je nutné obsluze zdělit stavovou hláškou v okně programu.
+
+Pokud není k dispozici spojení se systémem EET dojde k uložení dané transakce do paměti (XML řetězec) a poté co je spojení opět navázáno se veškeré transakce odešlou. O stavu neodeslaných uložených transakcí EET je nutné obsluhu informovat stavovou hláškou v okně programu.
+
+Ceny jednotlivých produktů jsou dynamicky nastavitelné v nastavení programu. Tyto hodnoty jsou uloženy v centrální databázi.
+
+V případě, že se ručním skenerem naskenuje kód, který je v chybném tvaru, je nutné oznámit chybu vstupu pomocí stavové hlášky v okně programu a k zahození naskenovaných dat. 
+
+
+\Sekce{Analýza požadavku účetního systému}
+
+
+
+
+

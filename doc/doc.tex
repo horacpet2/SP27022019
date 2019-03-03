@@ -1,0 +1,28 @@
+\def\ddr{/home/petr/.texLib}
+
+\input \ddr/TeXMakro
+\setAddress{\ddr}
+\input \ddr/FormatA4
+
+%\input \ddr/KonfiguracePaperBook
+%\input \ddr/KonfiguraceEBook
+%makra
+
+%Načtení obrázků
+%\pdfximage width/height 	he\SirkaOdstavce mm {./Obrazky/obr}
+\pdfximage width \SirkaOdstavce mm {./Obrazky/pokladni_system_use_case.png}
+
+%Titulní stránka
+%\VlozitDokument{TitulniStranka}
+
+%generování obsahu
+\Obsah
+
+\input slovnik
+\input definicePozadavku
+\input architektura
+\input dokumentace
+\input todo
+\input rizika
+
+\end
