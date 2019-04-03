@@ -2,3 +2,6 @@
 *.o
 
 
+/prototype/epson_prototype/nbproject/private/
+/prototype/epson_prototype/build/
+/prototype/epson_prototype/dist/
