@@ -16,6 +16,7 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -33,6 +34,7 @@ public final class main_window extends javax.swing.JFrame
     private final Timer error_blink;
     private Controler controler_ref;
     private boolean error_blink_bool;
+    private int man_input_btn_offset;
 
     public main_window() 
     {
@@ -50,6 +52,7 @@ public final class main_window extends javax.swing.JFrame
         
         this.error_blink_bool = false;
         this.btn_go_to_pay.setEnabled(false);
+        this.man_input_btn_offset = 0;
 
         exit_null_timer.scheduleAtFixedRate(new TimerTask() 
         {
@@ -88,10 +91,11 @@ public final class main_window extends javax.swing.JFrame
         order_table_view.getColumnModel().getColumn(3).setCellRenderer( centerRenderer );
         
         /* initial hide all other panels exeptionaly order panel */
+        initialize_manual_input(this.controler_ref.get_available_item_num());
         show_order_panel();
         
         
-        //hide_cursor();
+        hide_cursor();
     }
 
     
@@ -114,6 +118,81 @@ public final class main_window extends javax.swing.JFrame
         } 
     }
     
+    private void initialize_manual_input(int max)
+    {
+        /*
+        if(this.man_input_btn_offset == 0)
+        {
+            this.btn_manual_previous.setEnabled(false);
+        }
+        else if(this.man_input_btn_offset > max)
+        {
+            this.btn_manual_next.setEnabled(false);
+        }
+        else
+        {
+            this.btn_manual_next.setEnabled(true);
+            this.btn_manual_previous.setEnabled(true);
+        }
+        */
+        
+        for(int i = 0; i < 15; i++)
+        {
+            JButton btn_man_input = get_btn_manual_input(i);
+            
+            if(btn_man_input != null)
+            {
+                if(i < (max % 16))
+                {
+                    btn_man_input.setVisible(true);
+                    btn_man_input.setText(this.controler_ref.get_order_item_name_by_code(i));
+                }
+                else
+                {
+                     btn_man_input.setVisible(false);
+                }
+            }
+        }
+    }
+    
+    private JButton get_btn_manual_input(int index)
+    {
+        switch(index)
+        {
+            case 0:
+                return this.btn_man_input_1;
+            case 1:
+                return this.btn_man_input_2;
+            case 2:
+                return this.btn_man_input_3;
+            case 3:
+                    return this.btn_man_input_4;
+            case 4:
+                    return this.btn_man_input_5;
+            case 5:
+                    return this.btn_man_input_6;
+            case 6:
+                    return this.btn_man_input_7;
+            case 7:
+                    return this.btn_man_input_8;
+            case 8:
+                    return this.btn_man_input_9;      
+            case 9:
+                    return this.btn_man_input_10;    
+            case 10:
+                    return this.btn_man_input_11; 
+            case 11:
+                    return this.btn_man_input_12;        
+            case 12:
+                    return this.btn_man_input_13;
+            case 13:
+                    return this.btn_man_input_14; 
+            case 14:
+                    return this.btn_man_input_15;        
+            default:
+                return null;
+        }
+    }
     
     private void hide_cursor()
     {
@@ -149,17 +228,24 @@ public final class main_window extends javax.swing.JFrame
         jButton14 = new javax.swing.JButton();
         error_line = new javax.swing.JLabel();
         manual_input_panel = new javax.swing.JPanel();
-        zitna_mouka_5_kg = new javax.swing.JButton();
+        btn_man_input_1 = new javax.swing.JButton();
         jButton3 = new javax.swing.JButton();
-        zitna_mouka_10_kg = new javax.swing.JButton();
-        zitna_mouka_25_kg = new javax.swing.JButton();
-        zitna_mouka_50_kg = new javax.swing.JButton();
-        spaldova_mouka_5_kg = new javax.swing.JButton();
-        spaldova_mouka_10_kg = new javax.swing.JButton();
-        spaldova_mouka_25_kg = new javax.swing.JButton();
-        spaldova_mouka_50_kg = new javax.swing.JButton();
-        zitna_mouka_15_kg = new javax.swing.JButton();
-        spaldova_mouka_15_kg = new javax.swing.JButton();
+        btn_man_input_2 = new javax.swing.JButton();
+        btn_man_input_4 = new javax.swing.JButton();
+        btn_man_input_5 = new javax.swing.JButton();
+        btn_man_input_6 = new javax.swing.JButton();
+        btn_man_input_7 = new javax.swing.JButton();
+        btn_man_input_9 = new javax.swing.JButton();
+        btn_man_input_10 = new javax.swing.JButton();
+        btn_man_input_3 = new javax.swing.JButton();
+        btn_man_input_8 = new javax.swing.JButton();
+        btn_man_input_11 = new javax.swing.JButton();
+        btn_man_input_12 = new javax.swing.JButton();
+        btn_man_input_13 = new javax.swing.JButton();
+        btn_man_input_14 = new javax.swing.JButton();
+        btn_man_input_15 = new javax.swing.JButton();
+        btn_manual_next = new javax.swing.JButton();
+        btn_manual_previous = new javax.swing.JButton();
         finish_order_panel = new javax.swing.JPanel();
         final_total_price = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
@@ -196,7 +282,7 @@ public final class main_window extends javax.swing.JFrame
 
         jLayeredPane1.setBackground(new java.awt.Color(204, 204, 255));
 
-        jLabel4.setIcon(new javax.swing.ImageIcon("/home/petr/NetBeansProjects/gui/logo-mlyn-dubecko.png")); // NOI18N
+        jLabel4.setIcon(new javax.swing.ImageIcon(getClass().getResource("/gui/logo-mlyn-dubecko.png"))); // NOI18N
         jLabel4.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 jLabel4MouseClicked(evt);
@@ -348,11 +434,11 @@ public final class main_window extends javax.swing.JFrame
 
         order_panelLayout.linkSize(javax.swing.SwingConstants.VERTICAL, new java.awt.Component[] {btn_go_to_pay, clear_and_new_order_btn, decrease_order_size, jButton14});
 
-        zitna_mouka_5_kg.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
-        zitna_mouka_5_kg.setText("Žitná mouka 5Kg");
-        zitna_mouka_5_kg.addActionListener(new java.awt.event.ActionListener() {
+        btn_man_input_1.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_1.setText("Žitná mouka 5Kg");
+        btn_man_input_1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                zitna_mouka_5_kgActionPerformed(evt);
+                btn_man_input_1ActionPerformed(evt);
             }
         });
 
@@ -364,75 +450,131 @@ public final class main_window extends javax.swing.JFrame
             }
         });
 
-        zitna_mouka_10_kg.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
-        zitna_mouka_10_kg.setText("Žitná mouka 10Kg");
-        zitna_mouka_10_kg.addActionListener(new java.awt.event.ActionListener() {
+        btn_man_input_2.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_2.setText("Žitná mouka 10Kg");
+        btn_man_input_2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                zitna_mouka_10_kgActionPerformed(evt);
+                btn_man_input_2ActionPerformed(evt);
             }
         });
 
-        zitna_mouka_25_kg.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
-        zitna_mouka_25_kg.setText("Žitná mouka 25Kg");
-        zitna_mouka_25_kg.addActionListener(new java.awt.event.ActionListener() {
+        btn_man_input_4.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_4.setText("Žitná mouka 25Kg");
+        btn_man_input_4.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                zitna_mouka_25_kgActionPerformed(evt);
+                btn_man_input_4ActionPerformed(evt);
             }
         });
 
-        zitna_mouka_50_kg.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
-        zitna_mouka_50_kg.setText("Žitná mouka 50Kg");
-        zitna_mouka_50_kg.addActionListener(new java.awt.event.ActionListener() {
+        btn_man_input_5.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_5.setText("Žitná mouka 50Kg");
+        btn_man_input_5.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                zitna_mouka_50_kgActionPerformed(evt);
+                btn_man_input_5ActionPerformed(evt);
             }
         });
 
-        spaldova_mouka_5_kg.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
-        spaldova_mouka_5_kg.setText("Špaldová mouka 5Kg");
-        spaldova_mouka_5_kg.addActionListener(new java.awt.event.ActionListener() {
+        btn_man_input_6.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_6.setText("Špaldová mouka 5Kg");
+        btn_man_input_6.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                spaldova_mouka_5_kgActionPerformed(evt);
+                btn_man_input_6ActionPerformed(evt);
             }
         });
 
-        spaldova_mouka_10_kg.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
-        spaldova_mouka_10_kg.setText("Špaldová mouka 10Kg");
-        spaldova_mouka_10_kg.addActionListener(new java.awt.event.ActionListener() {
+        btn_man_input_7.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_7.setText("Špaldová mouka 10Kg");
+        btn_man_input_7.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                spaldova_mouka_10_kgActionPerformed(evt);
+                btn_man_input_7ActionPerformed(evt);
             }
         });
 
-        spaldova_mouka_25_kg.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
-        spaldova_mouka_25_kg.setText("Špaldová mouka 25Kg");
-        spaldova_mouka_25_kg.addActionListener(new java.awt.event.ActionListener() {
+        btn_man_input_9.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_9.setText("Špaldová mouka 25Kg");
+        btn_man_input_9.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                spaldova_mouka_25_kgActionPerformed(evt);
+                btn_man_input_9ActionPerformed(evt);
             }
         });
 
-        spaldova_mouka_50_kg.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
-        spaldova_mouka_50_kg.setText("Špaldová mouka 50Kg");
-        spaldova_mouka_50_kg.addActionListener(new java.awt.event.ActionListener() {
+        btn_man_input_10.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_10.setText("Špaldová mouka 50Kg");
+        btn_man_input_10.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                spaldova_mouka_50_kgActionPerformed(evt);
+                btn_man_input_10ActionPerformed(evt);
             }
         });
 
-        zitna_mouka_15_kg.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
-        zitna_mouka_15_kg.setText("Špaldová mouka 15Kg");
-        zitna_mouka_15_kg.addActionListener(new java.awt.event.ActionListener() {
+        btn_man_input_3.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_3.setText("Špaldová mouka 15Kg");
+        btn_man_input_3.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                zitna_mouka_15_kgActionPerformed(evt);
+                btn_man_input_3ActionPerformed(evt);
             }
         });
 
-        spaldova_mouka_15_kg.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
-        spaldova_mouka_15_kg.setText("Špaldová mouka 15Kg");
-        spaldova_mouka_15_kg.addActionListener(new java.awt.event.ActionListener() {
+        btn_man_input_8.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_8.setText("Špaldová mouka 15Kg");
+        btn_man_input_8.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                spaldova_mouka_15_kgActionPerformed(evt);
+                btn_man_input_8ActionPerformed(evt);
+            }
+        });
+
+        btn_man_input_11.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_11.setText("Špaldová mouka 5Kg");
+        btn_man_input_11.setFocusable(false);
+        btn_man_input_11.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_man_input_11ActionPerformed(evt);
+            }
+        });
+
+        btn_man_input_12.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_12.setText("Špaldová mouka 10Kg");
+        btn_man_input_12.setFocusable(false);
+        btn_man_input_12.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_man_input_12ActionPerformed(evt);
+            }
+        });
+
+        btn_man_input_13.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_13.setText("Špaldová mouka 15Kg");
+        btn_man_input_13.setFocusable(false);
+        btn_man_input_13.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_man_input_13ActionPerformed(evt);
+            }
+        });
+
+        btn_man_input_14.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_14.setText("Špaldová mouka 25Kg");
+        btn_man_input_14.setFocusable(false);
+        btn_man_input_14.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_man_input_14ActionPerformed(evt);
+            }
+        });
+
+        btn_man_input_15.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_man_input_15.setText("Špaldová mouka 50Kg");
+        btn_man_input_15.setFocusable(false);
+        btn_man_input_15.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_man_input_15ActionPerformed(evt);
+            }
+        });
+
+        btn_manual_next.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_manual_next.setText("Další");
+
+        btn_manual_previous.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        btn_manual_previous.setText("Předchozí");
+        btn_manual_previous.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_manual_previousActionPerformed(evt);
             }
         });
 
@@ -441,56 +583,93 @@ public final class main_window extends javax.swing.JFrame
         manual_input_panelLayout.setHorizontalGroup(
             manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(manual_input_panelLayout.createSequentialGroup()
-                .addGap(104, 104, 104)
-                .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(zitna_mouka_5_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 228, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 228, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(zitna_mouka_10_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 228, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(zitna_mouka_25_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 228, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(zitna_mouka_50_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 228, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(zitna_mouka_15_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(51, 51, 51)
-                .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(spaldova_mouka_5_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(spaldova_mouka_10_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(spaldova_mouka_25_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(spaldova_mouka_50_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(spaldova_mouka_15_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap())
+                .addContainerGap(79, Short.MAX_VALUE)
+                .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addGroup(manual_input_panelLayout.createSequentialGroup()
+                        .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(btn_man_input_1, javax.swing.GroupLayout.PREFERRED_SIZE, 228, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(btn_man_input_2, javax.swing.GroupLayout.PREFERRED_SIZE, 228, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(btn_man_input_4, javax.swing.GroupLayout.PREFERRED_SIZE, 228, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(btn_man_input_5, javax.swing.GroupLayout.PREFERRED_SIZE, 228, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(btn_man_input_3, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(50, 50, 50)
+                        .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(btn_man_input_6, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(btn_man_input_7, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(btn_man_input_9, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(btn_man_input_10, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(btn_man_input_8, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(manual_input_panelLayout.createSequentialGroup()
+                        .addComponent(btn_manual_previous)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 254, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addGap(50, 50, 50)
+                .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addComponent(btn_man_input_11, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(btn_man_input_12, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(btn_man_input_13, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(btn_man_input_14, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(btn_man_input_15, javax.swing.GroupLayout.PREFERRED_SIZE, 263, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(btn_manual_next, javax.swing.GroupLayout.PREFERRED_SIZE, 259, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(140, Short.MAX_VALUE))
         );
 
-        manual_input_panelLayout.linkSize(javax.swing.SwingConstants.HORIZONTAL, new java.awt.Component[] {jButton3, spaldova_mouka_5_kg, zitna_mouka_10_kg, zitna_mouka_25_kg, zitna_mouka_50_kg, zitna_mouka_5_kg});
+        manual_input_panelLayout.linkSize(javax.swing.SwingConstants.HORIZONTAL, new java.awt.Component[] {btn_man_input_1, btn_man_input_2, btn_man_input_4, btn_man_input_6});
+
+        manual_input_panelLayout.linkSize(javax.swing.SwingConstants.HORIZONTAL, new java.awt.Component[] {btn_man_input_5, btn_manual_next, btn_manual_previous, jButton3});
 
         manual_input_panelLayout.setVerticalGroup(
             manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(manual_input_panelLayout.createSequentialGroup()
                 .addGap(67, 67, 67)
-                .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(zitna_mouka_5_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(spaldova_mouka_5_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(31, 31, 31)
-                .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(zitna_mouka_10_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(spaldova_mouka_10_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(31, 31, 31)
                 .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                        .addComponent(zitna_mouka_15_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(spaldova_mouka_15_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(manual_input_panelLayout.createSequentialGroup()
-                        .addGap(110, 110, 110)
+                        .addComponent(btn_man_input_11, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(31, 31, 31)
+                        .addComponent(btn_man_input_12, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(31, 31, 31)
                         .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(spaldova_mouka_25_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(btn_man_input_13, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addGroup(manual_input_panelLayout.createSequentialGroup()
-                                .addComponent(zitna_mouka_25_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(33, 33, 33)
-                                .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                    .addComponent(zitna_mouka_50_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(spaldova_mouka_50_kg, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE))))))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 294, Short.MAX_VALUE)
-                .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(34, 34, 34))
+                                .addGap(110, 110, 110)
+                                .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(btn_man_input_14, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addGroup(manual_input_panelLayout.createSequentialGroup()
+                                        .addGap(110, 110, 110)
+                                        .addComponent(btn_man_input_15, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE))))))
+                    .addGroup(manual_input_panelLayout.createSequentialGroup()
+                        .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(btn_man_input_1, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(btn_man_input_6, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(31, 31, 31)
+                        .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(btn_man_input_2, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(btn_man_input_7, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(31, 31, 31)
+                        .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                .addComponent(btn_man_input_3, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(btn_man_input_8, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(manual_input_panelLayout.createSequentialGroup()
+                                .addGap(110, 110, 110)
+                                .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(btn_man_input_9, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addGroup(manual_input_panelLayout.createSequentialGroup()
+                                        .addComponent(btn_man_input_4, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addGap(33, 33, 33)
+                                        .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                            .addComponent(btn_man_input_5, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                            .addComponent(btn_man_input_10, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE))))))))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 100, Short.MAX_VALUE)
+                .addGroup(manual_input_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btn_manual_next)
+                    .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 70, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btn_manual_previous))
+                .addContainerGap(100, Short.MAX_VALUE))
         );
+
+        manual_input_panelLayout.linkSize(javax.swing.SwingConstants.VERTICAL, new java.awt.Component[] {btn_manual_next, btn_manual_previous, jButton3});
 
         final_total_price.setFont(new java.awt.Font("Dialog", 1, 28)); // NOI18N
         final_total_price.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
@@ -717,12 +896,12 @@ public final class main_window extends javax.swing.JFrame
                         .addGroup(finish_order_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, finish_order_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                                 .addComponent(final_total_price, javax.swing.GroupLayout.DEFAULT_SIZE, 418, Short.MAX_VALUE)
-                                .addComponent(given_money_input, javax.swing.GroupLayout.Alignment.LEADING)
-                                .addComponent(return_money_lbl, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 418, Short.MAX_VALUE))
+                                .addComponent(given_money_input, javax.swing.GroupLayout.Alignment.LEADING))
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, finish_order_panelLayout.createSequentialGroup()
                                 .addComponent(btn_back_to_order, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(18, 18, 18)
-                                .addComponent(btn_finish_order, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                                .addComponent(btn_finish_order, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(return_money_lbl, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 418, javax.swing.GroupLayout.PREFERRED_SIZE))))
                 .addGap(94, 94, 94))
             .addGroup(finish_order_panelLayout.createSequentialGroup()
                 .addGap(50, 50, 50)
@@ -737,21 +916,21 @@ public final class main_window extends javax.swing.JFrame
         finish_order_panelLayout.setVerticalGroup(
             finish_order_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(finish_order_panelLayout.createSequentialGroup()
-                .addGap(100, 100, 100)
+                .addGap(75, 75, 75)
                 .addComponent(error_line1, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(20, 20, 20)
-                .addGroup(finish_order_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(final_total_price, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel5, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(40, 40, 40)
-                .addGroup(finish_order_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel6)
-                    .addComponent(given_money_input, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(40, 40, 40)
+                .addGap(30, 30, 30)
                 .addGroup(finish_order_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(return_money_lbl, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel7))
-                .addGap(18, 18, 18)
+                    .addComponent(jLabel5, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(final_total_price, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(20, 20, 20)
+                .addGroup(finish_order_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(given_money_input, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(20, 20, 20)
+                .addGroup(finish_order_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel7, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(return_money_lbl, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(19, 19, 19)
                 .addGroup(finish_order_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(finish_order_panelLayout.createSequentialGroup()
                         .addGroup(finish_order_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
@@ -774,7 +953,7 @@ public final class main_window extends javax.swing.JFrame
                         .addComponent(btn_clear, javax.swing.GroupLayout.PREFERRED_SIZE, 85, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(18, 18, 18)
                         .addComponent(btn_zero, javax.swing.GroupLayout.PREFERRED_SIZE, 85, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 47, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 40, Short.MAX_VALUE)
                 .addGroup(finish_order_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(finish_order_panelLayout.createSequentialGroup()
                         .addComponent(btn_finish_order, javax.swing.GroupLayout.PREFERRED_SIZE, 70, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -783,14 +962,14 @@ public final class main_window extends javax.swing.JFrame
                         .addGroup(finish_order_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(btn_print_bill, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(btn_back_to_order, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 70, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(57, 57, 57))))
+                        .addContainerGap(70, Short.MAX_VALUE))))
         );
 
-        finish_order_panelLayout.linkSize(javax.swing.SwingConstants.VERTICAL, new java.awt.Component[] {jLabel5, jLabel6, jLabel7});
-
-        finish_order_panelLayout.linkSize(javax.swing.SwingConstants.VERTICAL, new java.awt.Component[] {final_total_price, given_money_input});
-
         finish_order_panelLayout.linkSize(javax.swing.SwingConstants.VERTICAL, new java.awt.Component[] {btn_back_to_order, btn_print_bill});
+
+        jLayeredPane1.setLayer(order_panel, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        jLayeredPane1.setLayer(manual_input_panel, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        jLayeredPane1.setLayer(finish_order_panel, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         javax.swing.GroupLayout jLayeredPane1Layout = new javax.swing.GroupLayout(jLayeredPane1);
         jLayeredPane1.setLayout(jLayeredPane1Layout);
@@ -810,9 +989,6 @@ public final class main_window extends javax.swing.JFrame
             .addGroup(jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addComponent(finish_order_panel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
-        jLayeredPane1.setLayer(order_panel, javax.swing.JLayeredPane.DEFAULT_LAYER);
-        jLayeredPane1.setLayer(manual_input_panel, javax.swing.JLayeredPane.DEFAULT_LAYER);
-        jLayeredPane1.setLayer(finish_order_panel, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -893,37 +1069,37 @@ public final class main_window extends javax.swing.JFrame
         }
     }//GEN-LAST:event_jLabel4MouseClicked
 
-    private void zitna_mouka_5_kgActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_zitna_mouka_5_kgActionPerformed
-        manual_add_item(0);
-    }//GEN-LAST:event_zitna_mouka_5_kgActionPerformed
+    private void btn_man_input_1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_1ActionPerformed
+        manual_add_item(0+man_input_btn_offset*15);
+    }//GEN-LAST:event_btn_man_input_1ActionPerformed
 
-    private void zitna_mouka_10_kgActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_zitna_mouka_10_kgActionPerformed
-        manual_add_item(1);
-    }//GEN-LAST:event_zitna_mouka_10_kgActionPerformed
+    private void btn_man_input_2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_2ActionPerformed
+        manual_add_item(1+man_input_btn_offset*15);
+    }//GEN-LAST:event_btn_man_input_2ActionPerformed
 
-    private void zitna_mouka_25_kgActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_zitna_mouka_25_kgActionPerformed
-        manual_add_item(3);;
-    }//GEN-LAST:event_zitna_mouka_25_kgActionPerformed
+    private void btn_man_input_4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_4ActionPerformed
+        manual_add_item(3+man_input_btn_offset*15);;
+    }//GEN-LAST:event_btn_man_input_4ActionPerformed
 
-    private void zitna_mouka_50_kgActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_zitna_mouka_50_kgActionPerformed
-        manual_add_item(4);
-    }//GEN-LAST:event_zitna_mouka_50_kgActionPerformed
+    private void btn_man_input_5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_5ActionPerformed
+        manual_add_item(4+man_input_btn_offset*15);
+    }//GEN-LAST:event_btn_man_input_5ActionPerformed
 
-    private void spaldova_mouka_5_kgActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_spaldova_mouka_5_kgActionPerformed
-        manual_add_item(5);
-    }//GEN-LAST:event_spaldova_mouka_5_kgActionPerformed
+    private void btn_man_input_6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_6ActionPerformed
+        manual_add_item(5+man_input_btn_offset*15);
+    }//GEN-LAST:event_btn_man_input_6ActionPerformed
 
-    private void spaldova_mouka_10_kgActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_spaldova_mouka_10_kgActionPerformed
-        manual_add_item(6);
-    }//GEN-LAST:event_spaldova_mouka_10_kgActionPerformed
+    private void btn_man_input_7ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_7ActionPerformed
+        manual_add_item(6+man_input_btn_offset*15);
+    }//GEN-LAST:event_btn_man_input_7ActionPerformed
 
-    private void spaldova_mouka_25_kgActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_spaldova_mouka_25_kgActionPerformed
-        manual_add_item(8);
-    }//GEN-LAST:event_spaldova_mouka_25_kgActionPerformed
+    private void btn_man_input_9ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_9ActionPerformed
+        manual_add_item(8+man_input_btn_offset*15);
+    }//GEN-LAST:event_btn_man_input_9ActionPerformed
 
-    private void spaldova_mouka_50_kgActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_spaldova_mouka_50_kgActionPerformed
-        manual_add_item(9);
-    }//GEN-LAST:event_spaldova_mouka_50_kgActionPerformed
+    private void btn_man_input_10ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_10ActionPerformed
+        manual_add_item(9+man_input_btn_offset*15);
+    }//GEN-LAST:event_btn_man_input_10ActionPerformed
 
     private void error_lineMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_error_lineMouseClicked
         controler_ref.reset_error();   
@@ -1004,7 +1180,7 @@ public final class main_window extends javax.swing.JFrame
 
     private void btn_print_billActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_print_billActionPerformed
       // pokud se již vytiskne účtenka nelze se vrátit zpět do objednávkového okna, tlačítko zpět se musí tratit
-        this.btn_back_to_order.setEnabled(false);
+        //this.btn_back_to_order.setEnabled(false);
         controler_ref.print_bill();
     }//GEN-LAST:event_btn_print_billActionPerformed
 
@@ -1012,13 +1188,38 @@ public final class main_window extends javax.swing.JFrame
         controler_ref.reset_error(); 
     }//GEN-LAST:event_error_line1MouseClicked
 
-    private void zitna_mouka_15_kgActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_zitna_mouka_15_kgActionPerformed
+    private void btn_man_input_3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_3ActionPerformed
         manual_add_item(2);
-    }//GEN-LAST:event_zitna_mouka_15_kgActionPerformed
+    }//GEN-LAST:event_btn_man_input_3ActionPerformed
 
-    private void spaldova_mouka_15_kgActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_spaldova_mouka_15_kgActionPerformed
+    private void btn_man_input_8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_8ActionPerformed
         manual_add_item(7);
-    }//GEN-LAST:event_spaldova_mouka_15_kgActionPerformed
+    }//GEN-LAST:event_btn_man_input_8ActionPerformed
+
+    private void btn_man_input_11ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_11ActionPerformed
+        manual_add_item(10+man_input_btn_offset*15);
+    }//GEN-LAST:event_btn_man_input_11ActionPerformed
+
+    private void btn_man_input_12ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_12ActionPerformed
+       manual_add_item(11+man_input_btn_offset*15);
+    }//GEN-LAST:event_btn_man_input_12ActionPerformed
+
+    private void btn_man_input_13ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_13ActionPerformed
+        manual_add_item(12+man_input_btn_offset*15);
+    }//GEN-LAST:event_btn_man_input_13ActionPerformed
+
+    private void btn_man_input_14ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_14ActionPerformed
+        manual_add_item(13+man_input_btn_offset*15);
+    }//GEN-LAST:event_btn_man_input_14ActionPerformed
+
+    private void btn_man_input_15ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_man_input_15ActionPerformed
+        manual_add_item(14+man_input_btn_offset*15);
+    }//GEN-LAST:event_btn_man_input_15ActionPerformed
+
+    private void btn_manual_previousActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_manual_previousActionPerformed
+        if(this.man_input_btn_offset > 0)
+            this.man_input_btn_offset --;
+    }//GEN-LAST:event_btn_manual_previousActionPerformed
 
     
     private void manual_add_item(int ID)
@@ -1126,6 +1327,23 @@ public final class main_window extends javax.swing.JFrame
     private javax.swing.JButton btn_five;
     private javax.swing.JButton btn_four;
     private javax.swing.JButton btn_go_to_pay;
+    private javax.swing.JButton btn_man_input_1;
+    private javax.swing.JButton btn_man_input_10;
+    private javax.swing.JButton btn_man_input_11;
+    private javax.swing.JButton btn_man_input_12;
+    private javax.swing.JButton btn_man_input_13;
+    private javax.swing.JButton btn_man_input_14;
+    private javax.swing.JButton btn_man_input_15;
+    private javax.swing.JButton btn_man_input_2;
+    private javax.swing.JButton btn_man_input_3;
+    private javax.swing.JButton btn_man_input_4;
+    private javax.swing.JButton btn_man_input_5;
+    private javax.swing.JButton btn_man_input_6;
+    private javax.swing.JButton btn_man_input_7;
+    private javax.swing.JButton btn_man_input_8;
+    private javax.swing.JButton btn_man_input_9;
+    private javax.swing.JButton btn_manual_next;
+    private javax.swing.JButton btn_manual_previous;
     private javax.swing.JButton btn_nine;
     private javax.swing.JButton btn_one;
     private javax.swing.JButton btn_print_bill;
@@ -1158,15 +1376,5 @@ public final class main_window extends javax.swing.JFrame
     private javax.swing.JTable order_table_view;
     private javax.swing.JLabel overview_total_prise_lbl;
     private javax.swing.JLabel return_money_lbl;
-    private javax.swing.JButton spaldova_mouka_10_kg;
-    private javax.swing.JButton spaldova_mouka_15_kg;
-    private javax.swing.JButton spaldova_mouka_25_kg;
-    private javax.swing.JButton spaldova_mouka_50_kg;
-    private javax.swing.JButton spaldova_mouka_5_kg;
-    private javax.swing.JButton zitna_mouka_10_kg;
-    private javax.swing.JButton zitna_mouka_15_kg;
-    private javax.swing.JButton zitna_mouka_25_kg;
-    private javax.swing.JButton zitna_mouka_50_kg;
-    private javax.swing.JButton zitna_mouka_5_kg;
     // End of variables declaration//GEN-END:variables
 }

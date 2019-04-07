@@ -147,7 +147,7 @@
             <Component class="javax.swing.JLabel" name="jLabel4">
               <Properties>
                 <Property name="icon" type="javax.swing.Icon" editor="org.netbeans.modules.form.editors2.IconEditor">
-                  <Image iconType="2" name="/home/petr/NetBeansProjects/gui/logo-mlyn-dubecko.png"/>
+                  <Image iconType="3" name="/gui/logo-mlyn-dubecko.png"/>
                 </Property>
               </Properties>
               <Events>
@@ -306,24 +306,43 @@
             <DimensionLayout dim="0">
               <Group type="103" groupAlignment="0" attributes="0">
                   <Group type="102" attributes="0">
-                      <EmptySpace min="-2" pref="104" max="-2" attributes="0"/>
-                      <Group type="103" groupAlignment="0" attributes="0">
-                          <Component id="zitna_mouka_5_kg" linkSize="2" min="-2" pref="228" max="-2" attributes="0"/>
-                          <Component id="jButton3" linkSize="2" min="-2" pref="228" max="-2" attributes="0"/>
-                          <Component id="zitna_mouka_10_kg" linkSize="2" min="-2" pref="228" max="-2" attributes="0"/>
-                          <Component id="zitna_mouka_25_kg" linkSize="2" min="-2" pref="228" max="-2" attributes="0"/>
-                          <Component id="zitna_mouka_50_kg" linkSize="2" min="-2" pref="228" max="-2" attributes="0"/>
-                          <Component id="zitna_mouka_15_kg" min="-2" pref="263" max="-2" attributes="0"/>
+                      <EmptySpace pref="79" max="32767" attributes="0"/>
+                      <Group type="103" groupAlignment="0" max="-2" attributes="0">
+                          <Group type="102" attributes="0">
+                              <Group type="103" groupAlignment="0" attributes="0">
+                                  <Component id="btn_man_input_1" linkSize="2" min="-2" pref="228" max="-2" attributes="0"/>
+                                  <Component id="btn_man_input_2" linkSize="2" min="-2" pref="228" max="-2" attributes="0"/>
+                                  <Component id="btn_man_input_4" linkSize="2" min="-2" pref="228" max="-2" attributes="0"/>
+                                  <Component id="btn_man_input_5" linkSize="14" min="-2" pref="228" max="-2" attributes="0"/>
+                                  <Component id="btn_man_input_3" min="-2" pref="263" max="-2" attributes="0"/>
+                              </Group>
+                              <EmptySpace min="-2" pref="50" max="-2" attributes="0"/>
+                              <Group type="103" groupAlignment="0" attributes="0">
+                                  <Component id="btn_man_input_6" linkSize="2" min="-2" pref="263" max="-2" attributes="0"/>
+                                  <Component id="btn_man_input_7" min="-2" pref="263" max="-2" attributes="0"/>
+                                  <Component id="btn_man_input_9" min="-2" pref="263" max="-2" attributes="0"/>
+                                  <Component id="btn_man_input_10" min="-2" pref="263" max="-2" attributes="0"/>
+                                  <Component id="btn_man_input_8" min="-2" pref="263" max="-2" attributes="0"/>
+                              </Group>
+                          </Group>
+                          <Group type="102" attributes="0">
+                              <Component id="btn_manual_previous" linkSize="14" min="-2" max="-2" attributes="0"/>
+                              <EmptySpace max="32767" attributes="0"/>
+                              <Component id="jButton3" linkSize="14" min="-2" pref="254" max="-2" attributes="0"/>
+                          </Group>
                       </Group>
-                      <EmptySpace min="-2" pref="51" max="-2" attributes="0"/>
-                      <Group type="103" groupAlignment="0" attributes="0">
-                          <Component id="spaldova_mouka_5_kg" linkSize="2" min="-2" pref="263" max="-2" attributes="0"/>
-                          <Component id="spaldova_mouka_10_kg" min="-2" pref="263" max="-2" attributes="0"/>
-                          <Component id="spaldova_mouka_25_kg" min="-2" pref="263" max="-2" attributes="0"/>
-                          <Component id="spaldova_mouka_50_kg" min="-2" pref="263" max="-2" attributes="0"/>
-                          <Component id="spaldova_mouka_15_kg" min="-2" pref="263" max="-2" attributes="0"/>
+                      <EmptySpace min="-2" pref="50" max="-2" attributes="0"/>
+                      <Group type="103" groupAlignment="1" attributes="0">
+                          <Group type="103" groupAlignment="0" attributes="0">
+                              <Component id="btn_man_input_11" min="-2" pref="263" max="-2" attributes="0"/>
+                              <Component id="btn_man_input_12" min="-2" pref="263" max="-2" attributes="0"/>
+                              <Component id="btn_man_input_13" min="-2" pref="263" max="-2" attributes="0"/>
+                              <Component id="btn_man_input_14" min="-2" pref="263" max="-2" attributes="0"/>
+                              <Component id="btn_man_input_15" min="-2" pref="263" max="-2" attributes="0"/>
+                          </Group>
+                          <Component id="btn_manual_next" linkSize="14" min="-2" pref="259" max="-2" attributes="0"/>
                       </Group>
-                      <EmptySpace max="-2" attributes="0"/>
+                      <EmptySpace pref="140" max="32767" attributes="0"/>
                   </Group>
               </Group>
             </DimensionLayout>
@@ -331,45 +350,72 @@
               <Group type="103" groupAlignment="0" attributes="0">
                   <Group type="102" alignment="0" attributes="0">
                       <EmptySpace min="-2" pref="67" max="-2" attributes="0"/>
-                      <Group type="103" groupAlignment="3" attributes="0">
-                          <Component id="zitna_mouka_5_kg" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
-                          <Component id="spaldova_mouka_5_kg" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
-                      </Group>
-                      <EmptySpace min="-2" pref="31" max="-2" attributes="0"/>
-                      <Group type="103" groupAlignment="3" attributes="0">
-                          <Component id="zitna_mouka_10_kg" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
-                          <Component id="spaldova_mouka_10_kg" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
-                      </Group>
-                      <EmptySpace min="-2" pref="31" max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="0" attributes="0">
-                          <Group type="103" groupAlignment="3" attributes="0">
-                              <Component id="zitna_mouka_15_kg" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
-                              <Component id="spaldova_mouka_15_kg" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
+                          <Group type="102" alignment="0" attributes="0">
+                              <Component id="btn_man_input_11" min="-2" pref="77" max="-2" attributes="0"/>
+                              <EmptySpace min="-2" pref="31" max="-2" attributes="0"/>
+                              <Component id="btn_man_input_12" min="-2" pref="77" max="-2" attributes="0"/>
+                              <EmptySpace min="-2" pref="31" max="-2" attributes="0"/>
+                              <Group type="103" groupAlignment="0" attributes="0">
+                                  <Component id="btn_man_input_13" alignment="0" min="-2" pref="77" max="-2" attributes="0"/>
+                                  <Group type="102" alignment="0" attributes="0">
+                                      <EmptySpace min="-2" pref="110" max="-2" attributes="0"/>
+                                      <Group type="103" groupAlignment="0" attributes="0">
+                                          <Component id="btn_man_input_14" alignment="0" min="-2" pref="77" max="-2" attributes="0"/>
+                                          <Group type="102" alignment="0" attributes="0">
+                                              <EmptySpace min="110" pref="110" max="-2" attributes="0"/>
+                                              <Component id="btn_man_input_15" min="-2" pref="77" max="-2" attributes="0"/>
+                                          </Group>
+                                      </Group>
+                                  </Group>
+                              </Group>
                           </Group>
                           <Group type="102" alignment="0" attributes="0">
-                              <EmptySpace min="-2" pref="110" max="-2" attributes="0"/>
+                              <Group type="103" groupAlignment="3" attributes="0">
+                                  <Component id="btn_man_input_1" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
+                                  <Component id="btn_man_input_6" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
+                              </Group>
+                              <EmptySpace min="-2" pref="31" max="-2" attributes="0"/>
+                              <Group type="103" groupAlignment="3" attributes="0">
+                                  <Component id="btn_man_input_2" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
+                                  <Component id="btn_man_input_7" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
+                              </Group>
+                              <EmptySpace min="-2" pref="31" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="0" attributes="0">
-                                  <Component id="spaldova_mouka_25_kg" alignment="0" min="-2" pref="77" max="-2" attributes="0"/>
-                                  <Group type="102" attributes="0">
-                                      <Component id="zitna_mouka_25_kg" min="-2" pref="77" max="-2" attributes="0"/>
-                                      <EmptySpace min="-2" pref="33" max="-2" attributes="0"/>
-                                      <Group type="103" groupAlignment="3" attributes="0">
-                                          <Component id="zitna_mouka_50_kg" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
-                                          <Component id="spaldova_mouka_50_kg" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
+                                  <Group type="103" groupAlignment="3" attributes="0">
+                                      <Component id="btn_man_input_3" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
+                                      <Component id="btn_man_input_8" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
+                                  </Group>
+                                  <Group type="102" alignment="0" attributes="0">
+                                      <EmptySpace min="-2" pref="110" max="-2" attributes="0"/>
+                                      <Group type="103" groupAlignment="0" attributes="0">
+                                          <Component id="btn_man_input_9" alignment="0" min="-2" pref="77" max="-2" attributes="0"/>
+                                          <Group type="102" attributes="0">
+                                              <Component id="btn_man_input_4" min="-2" pref="77" max="-2" attributes="0"/>
+                                              <EmptySpace min="-2" pref="33" max="-2" attributes="0"/>
+                                              <Group type="103" groupAlignment="3" attributes="0">
+                                                  <Component id="btn_man_input_5" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
+                                                  <Component id="btn_man_input_10" alignment="3" min="-2" pref="77" max="-2" attributes="0"/>
+                                              </Group>
+                                          </Group>
                                       </Group>
                                   </Group>
                               </Group>
                           </Group>
                       </Group>
-                      <EmptySpace pref="294" max="32767" attributes="0"/>
-                      <Component id="jButton3" min="-2" pref="56" max="-2" attributes="0"/>
-                      <EmptySpace min="-2" pref="34" max="-2" attributes="0"/>
+                      <EmptySpace pref="100" max="32767" attributes="0"/>
+                      <Group type="103" groupAlignment="3" attributes="0">
+                          <Component id="btn_manual_next" linkSize="13" alignment="3" min="-2" max="-2" attributes="0"/>
+                          <Component id="jButton3" linkSize="13" alignment="3" min="-2" pref="70" max="-2" attributes="0"/>
+                          <Component id="btn_manual_previous" linkSize="13" alignment="3" min="-2" max="-2" attributes="0"/>
+                      </Group>
+                      <EmptySpace pref="100" max="32767" attributes="0"/>
                   </Group>
               </Group>
             </DimensionLayout>
           </Layout>
           <SubComponents>
-            <Component class="javax.swing.JButton" name="zitna_mouka_5_kg">
+            <Component class="javax.swing.JButton" name="btn_man_input_1">
               <Properties>
                 <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
                   <Font name="Dialog" size="18" style="1"/>
@@ -377,7 +423,7 @@
                 <Property name="text" type="java.lang.String" value="&#x17d;itn&#xe1; mouka 5Kg"/>
               </Properties>
               <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="zitna_mouka_5_kgActionPerformed"/>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_1ActionPerformed"/>
               </Events>
             </Component>
             <Component class="javax.swing.JButton" name="jButton3">
@@ -391,7 +437,7 @@
                 <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="jButton3ActionPerformed"/>
               </Events>
             </Component>
-            <Component class="javax.swing.JButton" name="zitna_mouka_10_kg">
+            <Component class="javax.swing.JButton" name="btn_man_input_2">
               <Properties>
                 <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
                   <Font name="Dialog" size="18" style="1"/>
@@ -399,10 +445,10 @@
                 <Property name="text" type="java.lang.String" value="&#x17d;itn&#xe1; mouka 10Kg"/>
               </Properties>
               <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="zitna_mouka_10_kgActionPerformed"/>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_2ActionPerformed"/>
               </Events>
             </Component>
-            <Component class="javax.swing.JButton" name="zitna_mouka_25_kg">
+            <Component class="javax.swing.JButton" name="btn_man_input_4">
               <Properties>
                 <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
                   <Font name="Dialog" size="18" style="1"/>
@@ -410,10 +456,10 @@
                 <Property name="text" type="java.lang.String" value="&#x17d;itn&#xe1; mouka 25Kg"/>
               </Properties>
               <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="zitna_mouka_25_kgActionPerformed"/>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_4ActionPerformed"/>
               </Events>
             </Component>
-            <Component class="javax.swing.JButton" name="zitna_mouka_50_kg">
+            <Component class="javax.swing.JButton" name="btn_man_input_5">
               <Properties>
                 <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
                   <Font name="Dialog" size="18" style="1"/>
@@ -421,10 +467,10 @@
                 <Property name="text" type="java.lang.String" value="&#x17d;itn&#xe1; mouka 50Kg"/>
               </Properties>
               <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="zitna_mouka_50_kgActionPerformed"/>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_5ActionPerformed"/>
               </Events>
             </Component>
-            <Component class="javax.swing.JButton" name="spaldova_mouka_5_kg">
+            <Component class="javax.swing.JButton" name="btn_man_input_6">
               <Properties>
                 <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
                   <Font name="Dialog" size="18" style="1"/>
@@ -432,10 +478,10 @@
                 <Property name="text" type="java.lang.String" value="&#x160;paldov&#xe1; mouka 5Kg"/>
               </Properties>
               <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="spaldova_mouka_5_kgActionPerformed"/>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_6ActionPerformed"/>
               </Events>
             </Component>
-            <Component class="javax.swing.JButton" name="spaldova_mouka_10_kg">
+            <Component class="javax.swing.JButton" name="btn_man_input_7">
               <Properties>
                 <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
                   <Font name="Dialog" size="18" style="1"/>
@@ -443,10 +489,10 @@
                 <Property name="text" type="java.lang.String" value="&#x160;paldov&#xe1; mouka 10Kg"/>
               </Properties>
               <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="spaldova_mouka_10_kgActionPerformed"/>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_7ActionPerformed"/>
               </Events>
             </Component>
-            <Component class="javax.swing.JButton" name="spaldova_mouka_25_kg">
+            <Component class="javax.swing.JButton" name="btn_man_input_9">
               <Properties>
                 <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
                   <Font name="Dialog" size="18" style="1"/>
@@ -454,10 +500,10 @@
                 <Property name="text" type="java.lang.String" value="&#x160;paldov&#xe1; mouka 25Kg"/>
               </Properties>
               <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="spaldova_mouka_25_kgActionPerformed"/>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_9ActionPerformed"/>
               </Events>
             </Component>
-            <Component class="javax.swing.JButton" name="spaldova_mouka_50_kg">
+            <Component class="javax.swing.JButton" name="btn_man_input_10">
               <Properties>
                 <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
                   <Font name="Dialog" size="18" style="1"/>
@@ -465,10 +511,10 @@
                 <Property name="text" type="java.lang.String" value="&#x160;paldov&#xe1; mouka 50Kg"/>
               </Properties>
               <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="spaldova_mouka_50_kgActionPerformed"/>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_10ActionPerformed"/>
               </Events>
             </Component>
-            <Component class="javax.swing.JButton" name="zitna_mouka_15_kg">
+            <Component class="javax.swing.JButton" name="btn_man_input_3">
               <Properties>
                 <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
                   <Font name="Dialog" size="18" style="1"/>
@@ -476,10 +522,10 @@
                 <Property name="text" type="java.lang.String" value="&#x160;paldov&#xe1; mouka 15Kg"/>
               </Properties>
               <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="zitna_mouka_15_kgActionPerformed"/>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_3ActionPerformed"/>
               </Events>
             </Component>
-            <Component class="javax.swing.JButton" name="spaldova_mouka_15_kg">
+            <Component class="javax.swing.JButton" name="btn_man_input_8">
               <Properties>
                 <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
                   <Font name="Dialog" size="18" style="1"/>
@@ -487,7 +533,86 @@
                 <Property name="text" type="java.lang.String" value="&#x160;paldov&#xe1; mouka 15Kg"/>
               </Properties>
               <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="spaldova_mouka_15_kgActionPerformed"/>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_8ActionPerformed"/>
+              </Events>
+            </Component>
+            <Component class="javax.swing.JButton" name="btn_man_input_11">
+              <Properties>
+                <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                  <Font name="Dialog" size="18" style="1"/>
+                </Property>
+                <Property name="text" type="java.lang.String" value="&#x160;paldov&#xe1; mouka 5Kg"/>
+                <Property name="focusable" type="boolean" value="false"/>
+              </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_11ActionPerformed"/>
+              </Events>
+            </Component>
+            <Component class="javax.swing.JButton" name="btn_man_input_12">
+              <Properties>
+                <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                  <Font name="Dialog" size="18" style="1"/>
+                </Property>
+                <Property name="text" type="java.lang.String" value="&#x160;paldov&#xe1; mouka 10Kg"/>
+                <Property name="focusable" type="boolean" value="false"/>
+              </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_12ActionPerformed"/>
+              </Events>
+            </Component>
+            <Component class="javax.swing.JButton" name="btn_man_input_13">
+              <Properties>
+                <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                  <Font name="Dialog" size="18" style="1"/>
+                </Property>
+                <Property name="text" type="java.lang.String" value="&#x160;paldov&#xe1; mouka 15Kg"/>
+                <Property name="focusable" type="boolean" value="false"/>
+              </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_13ActionPerformed"/>
+              </Events>
+            </Component>
+            <Component class="javax.swing.JButton" name="btn_man_input_14">
+              <Properties>
+                <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                  <Font name="Dialog" size="18" style="1"/>
+                </Property>
+                <Property name="text" type="java.lang.String" value="&#x160;paldov&#xe1; mouka 25Kg"/>
+                <Property name="focusable" type="boolean" value="false"/>
+              </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_14ActionPerformed"/>
+              </Events>
+            </Component>
+            <Component class="javax.swing.JButton" name="btn_man_input_15">
+              <Properties>
+                <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                  <Font name="Dialog" size="18" style="1"/>
+                </Property>
+                <Property name="text" type="java.lang.String" value="&#x160;paldov&#xe1; mouka 50Kg"/>
+                <Property name="focusable" type="boolean" value="false"/>
+              </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_man_input_15ActionPerformed"/>
+              </Events>
+            </Component>
+            <Component class="javax.swing.JButton" name="btn_manual_next">
+              <Properties>
+                <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                  <Font name="Dialog" size="18" style="1"/>
+                </Property>
+                <Property name="text" type="java.lang.String" value="Dal&#x161;&#xed;"/>
+              </Properties>
+            </Component>
+            <Component class="javax.swing.JButton" name="btn_manual_previous">
+              <Properties>
+                <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                  <Font name="Dialog" size="18" style="1"/>
+                </Property>
+                <Property name="text" type="java.lang.String" value="P&#x159;edchoz&#xed;"/>
+              </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btn_manual_previousActionPerformed"/>
               </Events>
             </Component>
           </SubComponents>
@@ -544,13 +669,13 @@
                                   <Group type="103" alignment="1" groupAlignment="1" max="-2" attributes="0">
                                       <Component id="final_total_price" pref="418" max="32767" attributes="0"/>
                                       <Component id="given_money_input" alignment="0" max="32767" attributes="0"/>
-                                      <Component id="return_money_lbl" alignment="0" pref="418" max="32767" attributes="0"/>
                                   </Group>
                                   <Group type="102" alignment="1" attributes="0">
                                       <Component id="btn_back_to_order" linkSize="11" min="-2" pref="200" max="-2" attributes="0"/>
                                       <EmptySpace type="separate" max="-2" attributes="0"/>
                                       <Component id="btn_finish_order" min="-2" pref="200" max="-2" attributes="0"/>
                                   </Group>
+                                  <Component id="return_money_lbl" alignment="1" min="-2" pref="418" max="-2" attributes="0"/>
                               </Group>
                           </Group>
                       </Group>
@@ -566,24 +691,24 @@
             <DimensionLayout dim="1">
               <Group type="103" groupAlignment="0" attributes="0">
                   <Group type="102" alignment="0" attributes="0">
-                      <EmptySpace min="-2" pref="100" max="-2" attributes="0"/>
+                      <EmptySpace min="-2" pref="75" max="-2" attributes="0"/>
                       <Component id="error_line1" min="-2" pref="23" max="-2" attributes="0"/>
-                      <EmptySpace min="-2" pref="20" max="-2" attributes="0"/>
-                      <Group type="103" groupAlignment="0" attributes="0">
-                          <Component id="final_total_price" linkSize="9" min="-2" pref="86" max="-2" attributes="0"/>
-                          <Component id="jLabel5" linkSize="7" alignment="0" min="-2" pref="86" max="-2" attributes="0"/>
-                      </Group>
-                      <EmptySpace min="-2" pref="40" max="-2" attributes="0"/>
-                      <Group type="103" groupAlignment="0" attributes="0">
-                          <Component id="jLabel6" linkSize="7" min="-2" max="-2" attributes="0"/>
-                          <Component id="given_money_input" linkSize="9" min="-2" max="-2" attributes="0"/>
-                      </Group>
-                      <EmptySpace min="40" pref="40" max="-2" attributes="0"/>
+                      <EmptySpace min="-2" pref="30" max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="3" attributes="0">
-                          <Component id="return_money_lbl" alignment="3" min="-2" pref="86" max="-2" attributes="0"/>
-                          <Component id="jLabel7" linkSize="7" alignment="3" min="-2" max="-2" attributes="0"/>
+                          <Component id="jLabel5" alignment="3" min="-2" pref="61" max="-2" attributes="0"/>
+                          <Component id="final_total_price" alignment="3" min="-2" pref="61" max="-2" attributes="0"/>
                       </Group>
-                      <EmptySpace type="separate" max="-2" attributes="0"/>
+                      <EmptySpace min="-2" pref="20" max="-2" attributes="0"/>
+                      <Group type="103" groupAlignment="3" attributes="0">
+                          <Component id="jLabel6" alignment="3" min="-2" pref="61" max="-2" attributes="0"/>
+                          <Component id="given_money_input" alignment="3" min="-2" pref="61" max="-2" attributes="0"/>
+                      </Group>
+                      <EmptySpace min="-2" pref="20" max="-2" attributes="0"/>
+                      <Group type="103" groupAlignment="3" attributes="0">
+                          <Component id="jLabel7" alignment="3" min="-2" pref="61" max="-2" attributes="0"/>
+                          <Component id="return_money_lbl" alignment="3" min="-2" pref="61" max="-2" attributes="0"/>
+                      </Group>
+                      <EmptySpace min="-2" pref="19" max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Group type="102" attributes="0">
                               <Group type="103" groupAlignment="3" attributes="0">
@@ -612,7 +737,7 @@
                               <Component id="btn_zero" min="-2" pref="85" max="-2" attributes="0"/>
                           </Group>
                       </Group>
-                      <EmptySpace pref="47" max="32767" attributes="0"/>
+                      <EmptySpace pref="40" max="32767" attributes="0"/>
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Group type="102" attributes="0">
                               <Component id="btn_finish_order" min="-2" pref="70" max="-2" attributes="0"/>
@@ -623,7 +748,7 @@
                                   <Component id="btn_print_bill" linkSize="12" alignment="1" min="-2" max="-2" attributes="0"/>
                                   <Component id="btn_back_to_order" linkSize="12" alignment="1" min="-2" pref="70" max="-2" attributes="0"/>
                               </Group>
-                              <EmptySpace min="57" pref="57" max="-2" attributes="0"/>
+                              <EmptySpace pref="70" max="32767" attributes="0"/>
                           </Group>
                       </Group>
                   </Group>

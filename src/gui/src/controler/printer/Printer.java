@@ -1,18 +1,28 @@
-/*
-** je nezbytné aby se v linuxu nastavila opravnění pro přístup do sériové linky lp (line printer).
-** Je nutné daného uživatele přidat do skupiny lp pomocí příkazu: sudo usermod -a -G lp <user>
-** aby se změny projevily, je nutné restart systému nebo odhlášení a opětovné přihlášení uživatele
-** pozor v linuxu se index zařízení na adrese /dev/usb/lpX mění
-*/
+
 package controler.printer;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.print.Doc;
+import javax.print.DocFlavor;
+import javax.print.DocPrintJob;
+import javax.print.PrintException;
+import javax.print.PrintService;
+import javax.print.PrintServiceLookup;
+import javax.print.SimpleDoc;
+import javax.print.attribute.HashPrintRequestAttributeSet;
+import javax.print.attribute.PrintRequestAttributeSet;
+import javax.print.attribute.Size2DSyntax;
+import javax.print.attribute.standard.MediaPrintableArea;
+
+
 
 /**
  *
@@ -21,8 +31,6 @@ import java.util.logging.Logger;
 public final class Printer 
 {
     private String printer_cmd;
-    private FileOutputStream fop;
-    private File file;
     private int print_counter;
     
     /* printer constants */
@@ -32,19 +40,25 @@ public final class Printer
     private final char EOT = 4;
     private final char SOH = 1;
     private final char ETX = 3;
+
    
     public Printer()
     {
         clear_print_counter();
         clear_print_buffer();
-
     }
-
+    
+    /*
+    ** předá hodnotu počítadla účtenek
+    */
     public int get_print_counter()
     {
         return this.print_counter;
     }
     
+    /*
+    ** resetuje se počítadlo vytištěných účtenek
+    */
     public void clear_print_counter()
     {
         this.print_counter = 0;
@@ -67,55 +81,25 @@ public final class Printer
         return this.printer_cmd;
     }
     
-    public boolean connect_printer_lin()
-    {
-        try 
-        {
-            file = new File("/dev/usb/lp0");
-            fop = new FileOutputStream(file);
-
-            return true;
-        } 
-        catch (FileNotFoundException ex) 
-        {
-            Logger.getLogger(Printer.class.getName()).log(Level.SEVERE, null, ex);
-            return false;
-        } 
-    } 
     
-    public boolean close_printer_connection_lin()
-    {
-        try 
-        {
-            fop.close();
-            return true;
-        } 
-        catch (IOException ex) 
-        {
-            Logger.getLogger(Printer.class.getName()).log(Level.SEVERE, null, ex);
-            return false;
-        }
-    }
     /*
     ** vyšle data s řídícími instrukcemi do tiskárny
     */
-    public void print()
+    public boolean print(int platform)
     {
-        try 
-        {
-            fop.write(replace_unsupported_characters(printer_cmd).getBytes("cp852"));
-            fop.flush();
-            this.print_counter++;
-        } 
-        catch (UnsupportedEncodingException ex) 
-        {
-            Logger.getLogger(Printer.class.getName()).log(Level.SEVERE, null, ex);
-        } 
-        catch (IOException ex) 
-        {
-            Logger.getLogger(Printer.class.getName()).log(Level.SEVERE, null, ex);
+        this.print_counter++;
+        
+        switch (platform) {
+            case 0:
+                return print_win();
+            case 1:
+                return print_lin();
+            default:
+                return false;
         }
     }
+    
+    
     
     /*
     ** přidá daný počet prázdných řádků na účtenku
@@ -205,13 +189,16 @@ public final class Printer
     
     /****************** privátní metody ********************************/
     
+    /*
+    ** funkce pro harazení tiskárnou nepodporovaných znaků za podporovanou alternativu    
+    */
     private String replace_unsupported_characters(String cmd)
     {
         String unsupported_characters = "ěščřžýáíéúůÉŠČŘŽÝÁÍÉÚÚ";
         String supported_characters = "escrzyaieuuESCRZYAIEUU";
-        
+
         char[] cmd_array = cmd.toCharArray();
-        
+
         for(int i = 0; i< cmd_array.length; i++)
         {
             for(int j =0; j <unsupported_characters.length(); j++)
@@ -222,7 +209,112 @@ public final class Printer
                 }
             }
         }
-        
+
         return new String(cmd_array);
+    }
+    
+
+    /*
+    ** funkce pro odeslání instrukcí do tiskárny a vytištění účtenky pod windows
+    ** ve windows beží na pozadí služba, která se stará o odesílání těchto dat do tiskárny
+    ** je nunté se připojit na tuto službu, přímé připojení na usb, není možné, protože je
+    ** zabrané touto službou
+    */
+    private boolean print_win()
+    {
+        DocFlavor flavor = DocFlavor.INPUT_STREAM.AUTOSENSE;
+
+        PrintRequestAttributeSet aset = new HashPrintRequestAttributeSet();
+        aset.add(new MediaPrintableArea(100,400,210,160,Size2DSyntax.MM));
+
+        try 
+        {
+            InputStream is = new ByteArrayInputStream(replace_unsupported_characters(printer_cmd).getBytes("cp852"));
+            Doc mydoc = new SimpleDoc(is, flavor, null);
+            PrintService defaultService = PrintServiceLookup.lookupDefaultPrintService();
+
+            //print using default
+            DocPrintJob job = defaultService.createPrintJob();
+            job.print(mydoc, aset);
+
+        } 
+        catch (Exception ex)
+        {
+            Logger.getLogger(Printer.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
+
+        return true;
+    }
+    
+    /*
+    ** připojení a odeslání instrukcí do tiskárny a vytištění účtenky
+    */
+    private boolean print_lin()
+    {
+        try 
+        {
+            FileOutputStream fop;
+            
+            if((fop = connect_printer_lin()) != null)
+            {
+                fop.write(replace_unsupported_characters(printer_cmd).getBytes("cp852"));
+                fop.flush();
+
+                return close_printer_connection_lin(fop);
+            }
+        } 
+        catch (UnsupportedEncodingException ex) 
+        {
+            Logger.getLogger(Printer.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        } 
+        catch (IOException ex) 
+        {
+            Logger.getLogger(Printer.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
+
+       return false;
+    }
+
+    /*
+    ** připojení tiskárny 
+    ** je nezbytné aby se v linuxu nastavila opravnění pro přístup do sériové linky lp (line printer).
+    ** Je nutné daného uživatele přidat do skupiny lp pomocí příkazu: sudo usermod -a -G lp <user>
+    ** aby se změny projevily, je nutné restart systému nebo odhlášení a opětovné přihlášení uživatele
+    ** pozor v linuxu se index zařízení na adrese /dev/usb/lpX mění
+    */
+    private FileOutputStream connect_printer_lin()
+    {
+        try 
+        {
+            File file = new File("/dev/usb/lp0");
+            FileOutputStream fop = new FileOutputStream(file);
+
+            return fop;
+        } 
+        catch (FileNotFoundException ex) 
+        {
+            Logger.getLogger(Printer.class.getName()).log(Level.SEVERE, null, ex);
+            return null;
+        } 
+    } 
+    
+    /*
+    ** odpojení otevřeného spojení do tiskárny pod linuxem 
+    */
+    private boolean close_printer_connection_lin(FileOutputStream fop)
+    {
+        try 
+        {
+            fop.close();
+            return true;
+        } 
+        catch (IOException ex) 
+        {
+            Logger.getLogger(Printer.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
     }
 }

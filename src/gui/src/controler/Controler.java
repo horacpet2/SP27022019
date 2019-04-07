@@ -4,8 +4,7 @@
 ** 1 - chyba spojení s databází!
 ** 2 - neznámé ID objednávky!
 ** 3 - Neznámá pozice objednávky!
-** 4 - Nelze se připojit k tiskárně!
-** 5 - Neúspěšné odpojení tiskárny!
+** 4 - Tisk účtenky nebyl úspěšný!
 */
 
 
@@ -33,7 +32,7 @@ public class Controler
     /* local atributs */
     private final ArrayList<OrderItem> order_list = new ArrayList();
     private String error_message;
-    double order_prise;
+    private final int platform;
     
     public Controler()
     {
@@ -42,21 +41,30 @@ public class Controler
         this.scanner_ref = new Scanner();
         this.database_ref = new Database();
         
-        this.error_message = new String();
+        this.error_message = new String();        
+        this.platform = get_platform(System.getProperty("os.name"));
+     
         
-
+        /*
         if(database_ref.connect_db() == false)
             this.error_message = "#1 Chyba spojení s databází!";
+        */
     }
     
     
-    /* public function - class interface */
+    /************************* public function - class interface **********************/
+    
+    /*
+    ** vrátí obsah chybového bufferu do vrstvy grafického rozhraní pro její zobrazení
+    */
     public String get_error_meesage()
     {
         return this.error_message;
     }
     
-    /* return list of order items */
+    /* 
+    ** return list of order items 
+    */
     public ArrayList get_order_list()
     {
         return this.order_list;
@@ -69,7 +77,7 @@ public class Controler
     */
     public boolean add_order_item(int ID)
     {
-        if(database_ref.is_connected() == true)
+        //if(database_ref.is_connected() == true)
         {
             String item_name = get_order_item_name_by_code(ID);
             
@@ -113,7 +121,7 @@ public class Controler
     {
         if(database_ref.is_connected() == false)
         {
-             this.error_message = "#1 Chyba spojení s databází!";
+            // this.error_message = "#1 Chyba spojení s databází!";
         }
         else
         {
@@ -122,12 +130,27 @@ public class Controler
         }
     }
     
-    
+    /*
+    ** generování dat pro tisk účtenky z pole obsahující objednávku
+    ** tato data jsou generována pouze jednou a poté je možné účtenku podle
+    ** stejné předlohy tisknout opakovaně
+    ** při návratu do objednávky pro její úpravu jsou vygenerované instrukce vymazány a
+    ** poté opět vygenerovány z aktualizovaných dat
+    */
     public void generate_bill_data()
     {
         String sum_string = "Celkem Včetně DPH:";
                 
         this.printer_ref.add_blank_line(3);
+        
+        /* hlavička */
+        this.printer_ref.add_string("Michal Zuna");
+        this.printer_ref.add_blank_line(1);
+        this.printer_ref.add_string("Pod Zelenou cestou 1768");
+        this.printer_ref.add_blank_line(1);
+        this.printer_ref.add_string("511 01 Turnov");
+        this.printer_ref.add_blank_line(1);
+        
         this.printer_ref.add_order_item("Zboží", "Ks", "Cena" ,"S DPH");
         this.printer_ref.add_blank_line(1);
         
@@ -151,14 +174,28 @@ public class Controler
         this.printer_ref.cut_paper();
     }
     
+    /*
+    ** reinicializuje data pro tiskárnu
+    */
     public void clear_bill_data()
     {
         this.printer_ref.clear_print_buffer();
     }
     
+    /*
+    ** pro centrální nastavení dph hodnoty
+    */
     public double get_dph_value()
     {
-        return 1.21;
+        return 1.15;
+    }
+    
+    /*
+    ** uloží data pro tisk účtenky do databáze, aby bylo možné jej v případě potřeby vytisknout znovu
+    */
+    public boolean save_bill_to_database()
+    {
+        return true;
     }
     
     /*
@@ -169,25 +206,20 @@ public class Controler
         return this.scanner_ref.scanner_in_event_state();
     }
     
-    /* generates data for print of the bill and sent this data to printer */
+    /* 
+    ** generates data for print of the bill and sent this data to printer 
+    */
     public void print_bill()
     {
-        if(this.printer_ref.connect_printer_lin() == true)
+        if(this.printer_ref.print(this.platform) == false)
         {
-            this.printer_ref.print();
-            
-            if(this.printer_ref.close_printer_connection_lin() == false)
-            {
-                this.error_message = "#5 Neúspěšné odpojení tiskárny!";
-            }
-        }
-        else
-        {
-            this.error_message = "#4 Nelze se připojit k tiskárně!";
+            this.error_message = "#4 Tisk účtenky nebyl úspěšný!";
         }
     }
     
-    /* decrements quantity of order item in array list, or remove the record from array list if the quantitiy is zero */
+    /* 
+    ** decrements quantity of order item in array list, or remove the record from array list if the quantitiy is zero 
+    */
     public void decrement_item(int index)
     {
         if((index >= 0) && (index < this.order_list.size()))
@@ -205,7 +237,9 @@ public class Controler
     }
     
     
-    /* increments quantity of order item in array list */
+    /* 
+    ** increments quantity of order item in array list 
+    */
     public void increment_item(int index)
     {
         if(index >= 0 && index < this.order_list.size())
@@ -218,11 +252,17 @@ public class Controler
         }
     }
     
+    /*
+    ** vypočítá celkovou hodnotu objednávky včetně dph a vrátí ji jako výsledek
+    */
     public double get_order_price_with_dph()
     {
         return Math.round(this.get_order_price() * this.get_dph_value());
     }
     
+    /*
+    ** vypočítá celkovou hodnotu objednávky bez dph a vrátí ji jako výsledek
+    */
     public double get_order_price()
     {
         double total_prise = 0.0;
@@ -236,7 +276,9 @@ public class Controler
         return total_prise;
     }
     
-    /* clear order list */
+    /* 
+    ** clear order list 
+    */
     public void clear_order()
     {
         this.order_list.clear();
@@ -244,6 +286,11 @@ public class Controler
         reset_error();
     }
     
+    /*
+    ** aby byla účtenka u každé objedávky vždy vytištěna alespoň jednou je ve třítě Printer definováno
+    ** počítadlo výtisků pro danou objednávku a pokud je tato funkce zavolána při dokončování objednávky
+    ** automaticky vytiskne účtenku v případě, že nebyla vytištena ručně
+    */
     public void print_bill_if_not_printed()
     {
         if(this.printer_ref.get_print_counter() == 0)
@@ -252,109 +299,122 @@ public class Controler
         }
     }
     
-    /* reset the error state */
+    /* 
+    ** reset the error state 
+    */
     public void reset_error()
     {
         this.error_message = "";
     }
     
-    /* private functions */
-    
-    
-    private double get_oder_item_price_by_code(int ID)
+    public int get_available_item_num()
     {
-        if(ID == 0)
-        {
-            return 20.0;
-        }
-        else if(ID == 1)
-        {
-            return 35.0;
-        }
-        else if(ID == 2)
-        {
-            return 50.0;
-        }
-        else if(ID == 3)
-        {
-            return 50.0;
-        }
-        else if(ID == 4)
-        {
-            return 80.0;
-        }
-        else if(ID == 5)
-        {
-            return 25.0;
-        }
-        else if(ID == 6)
-        {
-            return 80.0;
-        }
-        else if(ID == 7)
-        {
-            return 120.0;
-        }
-        else if(ID == 8)
-        {
-            return 200.0;
-        }
-        else if(ID == 9)
-        {
-            return 370.0;
-        }
-        else
-        {
-            return 0.0;
+        return 15;
+    }    
+    /* 
+    ** get name of the order name by given ID scanned from bar code or manual inserted via graphic interface 
+    */
+    public String get_order_item_name_by_code(int ID)
+    {
+        switch (ID) {
+            case 0:
+                return "Žitná chlebová 5Kg";
+            case 1:
+                return "Žitná chlebová 10Kg";
+            case 2:
+                return "Žitná chlebová 15Kg";
+            case 3:
+                return "Žitná chlebová 25Kg";
+            case 4:
+                return "Žitná chlebová 50Kg";
+            case 5:
+                return "Žitná celozrnná 5Kg";
+            case 6:
+                return "Žitná celozrnná 10Kg";
+            case 7:
+                return "Žitná celozrnná 15Kg";
+            case 8:
+                return "Žitná celozrnná 25Kg";
+            case 9:
+                return "Žitná celozrnná 50Kg";
+            case 10:
+                return "Žitná trhanka 5Kg";
+            case 11:
+                return "Žitná trhanka 10Kg";
+            case 12:
+                return "Žitná trhanka 15Kg";    
+            case 13:
+                return "Žitná trhanka 25Kg";  
+            case 14:
+                return "Žitná trhanka 50Kg";    
+            default:
+                return "defalult";
         }
     }
     
-    /* get name of the order name by given ID scanned from bar code or manual inserted via graphic interface */
-    private String get_order_item_name_by_code(int ID)
+    /*********************** private functions ***************************/
+    
+    /*
+    ** identifikace základní ceny bez dph pro produkt identifikovaný pomocí hodnoty ID
+    */
+    private double get_oder_item_price_by_code(int ID)
     {
-        if(ID == 0)
-        {
-            return "Žitná mouka 5Kg";
+        switch (ID) {
+            case 0:
+                return 60.85;
+            case 1:
+                return 121.70;
+            case 2:
+                return 182.55;
+            case 3:
+                return 304.25;
+            case 4:
+                return 608.50;
+            case 5:
+                return 78.25;
+            case 6:
+                return 156.50;
+            case 7:
+                return 234.75;
+            case 8:
+                return 391.25;
+            case 9:
+                return 782.50;
+            case 10:
+                return 78.25;
+            case 11:
+                return 156.50;
+            case 12:
+                return 234.75;
+            case 13:
+                return 391.25;
+            case 14:
+                return 782.50;    
+            default:
+                return 0.0;
         }
-        else if(ID == 1)
+    }
+    
+    
+    
+    /*
+    ** aby byla aplikace můltiplatformní je nutné zjistit na které platfomně byla spuštěna
+    ** na základě toho se vrátí číselná hodnota identifikující danou platformu
+    ** v aplikaci je platformě závislí kód (viz. tiskárna)
+    */
+    private int get_platform(String platform_name)
+    {
+        if(platform_name.startsWith("Windows"))
         {
-            return "Žitná mouka 10Kg";
+            return 0;
         }
-        else if(ID == 2)
+        else if(platform_name.startsWith("Linux"))
         {
-            return "Žitná mouka 15Kg";
-        }
-        else if(ID == 3)
-        {
-            return "Žitná mouka 25Kg";
-        }
-        else if(ID == 4)
-        {
-            return "Žitná mouka 50Kg";
-        }
-        else if(ID == 5)
-        {
-            return "Špaldová mouka 5Kg";
-        }
-        else if(ID == 6)
-        {
-            return "Špaldová mouka 10Kg";
-        }
-        else if(ID == 7)
-        {
-            return "Špaldová mouka 15Kg";
-        }
-        else if(ID == 8)
-        {
-            return "Špaldová mouka 25Kg";
-        }
-        else if(ID == 9)
-        {
-            return "Špaldová mouka 50Kg";
+            return 1;
         }
         else
         {
-            return null;
+            return -1;
         }
     }
 }
