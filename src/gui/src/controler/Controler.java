@@ -1,10 +1,19 @@
 
 /*
+** Jádro systému, které propojuje jednotlivé dílčí moduly: Printer, Database, Scanner, EET
+** 
+**
+**
+**
+**
 ** chybové stavy:
 ** 1 - chyba spojení s databází!
 ** 2 - neznámé ID objednávky!
 ** 3 - Neznámá pozice objednávky!
 ** 4 - Tisk účtenky nebyl úspěšný!
+** 5 - Chyba načítání dat, něco se stalo s databází!
+** 6 - Nedostatek skladových zásob
+** 7 - Chyba při aktualizaci skladových zásob
 */
 
 
@@ -16,6 +25,8 @@ import controler.eet.EET;
 import controler.printer.Printer;
 import controler.database.Database;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.TreeMap;
 
 /**
  *
@@ -30,7 +41,7 @@ public class Controler
     private final Database database_ref;
     
     /* local atributs */
-    private final ArrayList<OrderItem> order_list = new ArrayList();
+    private final TreeMap <Integer, OrderItem> order_list;
     private String error_message;
     private final int platform;
     
@@ -42,81 +53,70 @@ public class Controler
         this.database_ref = new Database();
         
         this.error_message = new String();        
-        this.platform = get_platform(System.getProperty("os.name"));
-     
+        this.platform = get_running_platform(System.getProperty("os.name"));
+        this.order_list = new TreeMap<>();
         
-        /*
         if(database_ref.connect_db() == false)
+        {
             this.error_message = "#1 Chyba spojení s databází!";
-        */
+        }
+        else
+        {
+            save_bills_from_file_to_database();
+        }    
     }
     
     
     /************************* public function - class interface **********************/
     
-    /*
-    ** vrátí obsah chybového bufferu do vrstvy grafického rozhraní pro její zobrazení
-    */
+    
     public String get_error_meesage()
     {
         return this.error_message;
     }
     
-    /* 
-    ** return list of order items 
-    */
-    public ArrayList get_order_list()
+    public TreeMap get_order_list()
     {
         return this.order_list;
-    }
+    } 
     
-   
-    
-    /*
-    ** function add item to item list or increment quantity of existing
-    */
     public boolean add_order_item(int ID)
-    {
-        //if(database_ref.is_connected() == true)
+    {        
+        if(database_ref.is_connected() == true)
         {
-            String item_name = get_order_item_name_by_code(ID);
+            int item_quantity = this.database_ref.get_available_item_quantity_by_ID(ID);
             
-            if(item_name != null)
+            if (item_quantity >= 0)
             {
-                OrderItem new_item = new OrderItem(ID, item_name,  this.get_oder_item_price_by_code(ID));
-                boolean item_found = false;
-                
-                for(int i=0; i<this.order_list.size(); i++)
-                {
-                    OrderItem item = this.order_list.get(i);
-                    
-                    if(item.get_id() == ID)
+                if(this.order_list.get(ID) != null)
+                { 
+                    if(item_quantity+1 >= this.order_list.get(ID).quantity)
                     {
-                        item_found = true;
-                        item.increment_quantity();
-                        break;
-                    } 
+
+                    }
                 }
-                
-                if(item_found == false)
+                else
                 {
-                    order_list.add(new_item);
+                    if(this.database_ref.get_available_item_quantity_by_ID(ID) >= 1)
+                    {
+                        String item_name = get_order_item_name_by_id(ID);
+                        String item_shortcut_name = get_order_item_shortcut_name_by_id(ID);
+                        double item_price = get_order_item_price_by_ID(ID);
+
+                        OrderItem new_item = new OrderItem(ID, item_name, item_shortcut_name, item_price);
+                    }
                 }
-                
-                return true;
+
             }
             else
             {
-                this.error_message = "#2 Neznámý ID kód objednávky!";
+                error_message = "#2 neznámé ID objednávky!";
             }
         }
         
         return false;
     }
     
-    /*
-    ** function is cyclic called from gui and if the database is not connected, then is set an error string and displayed in gui interface
-    */
     public void check_db_connection()
     {
         if(database_ref.is_connected() == false)
@@ -174,28 +174,21 @@ public class Controler
         this.printer_ref.cut_paper();
     }
     
-    /*
-    ** reinicializuje data pro tiskárnu
-    */
-    public void clear_bill_data()
+
+    public void clear_printer_output_buffer()
     {
         this.printer_ref.clear_print_buffer();
     }
-    
-    /*
-    ** pro centrální nastavení dph hodnoty
-    */
+
     public double get_dph_value()
     {
         return 1.15;
     }
-    
-    /*
-    ** uloží data pro tisk účtenky do databáze, aby bylo možné jej v případě potřeby vytisknout znovu
-    */
-    public boolean save_bill_to_database()
+
+    public boolean save_bill_data_for_printing_to_database()
     {
-        return true;
+        long date_in_millisec = new Date().getTime();
+        return this.database_ref.save_bill_data(this.printer_ref.get_print_buffer(), date_in_millisec);
     }
     
     /*
@@ -206,9 +199,6 @@ public class Controler
         return this.scanner_ref.scanner_in_event_state();
     }
     
-    /* 
-    ** generates data for print of the bill and sent this data to printer 
-    */
     public void print_bill()
     {
         if(this.printer_ref.print(this.platform) == false)
@@ -217,10 +207,8 @@ public class Controler
         }
     }
     
-    /* 
-    ** decrements quantity of order item in array list, or remove the record from array list if the quantitiy is zero 
-    */
-    public void decrement_item(int index)
+
+    public void decrement_item_in_order_list(int index)
     {
         if((index >= 0) && (index < this.order_list.size()))
         {
@@ -237,14 +225,16 @@ public class Controler
     }
     
     
-    /* 
-    ** increments quantity of order item in array list 
-    */
-    public void increment_item(int index)
+    public void increment_item_in_order_list(int index)
     {
         if(index >= 0 && index < this.order_list.size())
         {
-            this.order_list.get(index).increment_quantity();
+            int quantity = this.database_ref.get_available_item_quantity_by_ID(this.order_list.get(index).get_id());
+            
+            if(this.order_list.get(index).get_quantity() < quantity)
+                this.order_list.get(index).increment_quantity();
+            else
+                this.error_message = "#6 Nedostatek skladových zásob";
         }
         else
         {
@@ -252,17 +242,13 @@ public class Controler
         }
     }
     
-    /*
-    ** vypočítá celkovou hodnotu objednávky včetně dph a vrátí ji jako výsledek
-    */
+
     public double get_order_price_with_dph()
     {
         return Math.round(this.get_order_price() * this.get_dph_value());
     }
     
-    /*
-    ** vypočítá celkovou hodnotu objednávky bez dph a vrátí ji jako výsledek
-    */
+
     public double get_order_price()
     {
         double total_prise = 0.0;
@@ -275,23 +261,32 @@ public class Controler
         
         return total_prise;
     }
-    
-    /* 
-    ** clear order list 
-    */
+
     public void clear_order()
     {
         this.order_list.clear();
-        clear_bill_data(); 
-        reset_error();
+        clear_printer_output_buffer(); 
+        //reset_error();
     }
     
-    /*
-    ** aby byla účtenka u každé objedávky vždy vytištěna alespoň jednou je ve třítě Printer definováno
-    ** počítadlo výtisků pro danou objednávku a pokud je tato funkce zavolána při dokončování objednávky
-    ** automaticky vytiskne účtenku v případě, že nebyla vytištena ručně
-    */
-    public void print_bill_if_not_printed()
+    public boolean update_item_quantity()
+    {
+        for(int i=0; i < this.order_list.size(); i++)
+        {
+            OrderItem item = this.order_list.get(i);
+            int quantity = this.database_ref.get_available_item_quantity_by_ID(item.get_id());
+            
+            if(this.database_ref.update_item_quantity_by_ID(item.get_id(), quantity-item.get_quantity()) == false)
+            {
+                this.error_message = "#7 Chyba při aktualizaci skladových zásob";
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    public void print_bill_if_not_printed_in_order()
     {
         if(this.printer_ref.get_print_counter() == 0)
         {
@@ -299,23 +294,28 @@ public class Controler
         }
     }
     
-    /* 
-    ** reset the error state 
-    */
-    public void reset_error()
+
+    public void reset_internal_error()
     {
         this.error_message = "";
     }
     
     public int get_available_item_num()
     {
-        return 15;
+        return this.database_ref.get_available_item_quantity();
     }    
-    /* 
-    ** get name of the order name by given ID scanned from bar code or manual inserted via graphic interface 
-    */
-    public String get_order_item_name_by_code(int ID)
+    
+    public String get_order_item_shortcut_name_by_id(int ID)
     {
+        
+        return null;
+    }
+
+    public String get_order_item_name_by_id(int ID)
+    {
+         return this.database_ref.get_item_name_by_ID(ID);
+         
+        /*
         switch (ID) {
             case 0:
                 return "Žitná chlebová 5Kg";
@@ -347,62 +347,43 @@ public class Controler
                 return "Žitná trhanka 25Kg";  
             case 14:
                 return "Žitná trhanka 50Kg";    
+            case 15:
+                return "Špaldová mouka 50Kg"; 
             default:
                 return "defalult";
         }
+        */
     }
     
     /*********************** private functions ***************************/
     
-    /*
-    ** identifikace základní ceny bez dph pro produkt identifikovaný pomocí hodnoty ID
-    */
-    private double get_oder_item_price_by_code(int ID)
+    private void save_bill_data_to_file(String bill_cmd, String key)
     {
-        switch (ID) {
-            case 0:
-                return 60.85;
-            case 1:
-                return 121.70;
-            case 2:
-                return 182.55;
-            case 3:
-                return 304.25;
-            case 4:
-                return 608.50;
-            case 5:
-                return 78.25;
-            case 6:
-                return 156.50;
-            case 7:
-                return 234.75;
-            case 8:
-                return 391.25;
-            case 9:
-                return 782.50;
-            case 10:
-                return 78.25;
-            case 11:
-                return 156.50;
-            case 12:
-                return 234.75;
-            case 13:
-                return 391.25;
-            case 14:
-                return 782.50;    
-            default:
-                return 0.0;
-        }
+        
     }
     
+    private ArrayList check_nonsaved_bills_in_directory()
+    {
+        ArrayList<String> bill_list = new ArrayList<>();
+        return bill_list;
+    }
     
+    private void save_bills_from_file_to_database()
+    {
+        ArrayList bill_list = check_nonsaved_bills_in_directory();
+        
+        if(bill_list.size() > 0)
+        {
+            
+        }
+    }
+
+    private double get_order_item_price_by_ID(int ID)
+    {
+            return this.database_ref.get_item_price_by_ID(ID);
+    }
     
-    /*
-    ** aby byla aplikace můltiplatformní je nutné zjistit na které platfomně byla spuštěna
-    ** na základě toho se vrátí číselná hodnota identifikující danou platformu
-    ** v aplikaci je platformě závislí kód (viz. tiskárna)
-    */
-    private int get_platform(String platform_name)
+    private int get_running_platform(String platform_name)
     {
         if(platform_name.startsWith("Windows"))
         {

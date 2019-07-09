@@ -5,13 +5,15 @@ public final class OrderItem
 {
     int ID;
     String name;
+    String item_shortcute_for_bill;
     double price;
     int quantity;
     
-    public OrderItem(int ID, String name, double price)
+    public OrderItem(int ID, String name, String item_shortcute_for_bill, double price)
     {
         this.name = name;
         this.ID = ID;
+        this.item_shortcute_for_bill = item_shortcute_for_bill;
         this.price = price;
         this.quantity = 1;
     }  
@@ -24,6 +26,10 @@ public final class OrderItem
         return this.quantity;
     }
     
+    public String get_item_shortcute_name()
+    {
+        return this.item_shortcute_for_bill;
+    }
     /*
     ** increment order item quantity
     */

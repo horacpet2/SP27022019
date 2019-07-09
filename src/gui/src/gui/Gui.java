@@ -10,7 +10,7 @@ public class Gui
 {
     public static void main(String[] args) 
     {
-        main_window  window = new main_window();
+        MainWindow  window = new MainWindow();
         window.setVisible(true);
     }
 }

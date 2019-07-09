@@ -13,7 +13,6 @@ import java.util.logging.Logger;
 import javax.print.Doc;
 import javax.print.DocFlavor;
 import javax.print.DocPrintJob;
-import javax.print.PrintException;
 import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
 import javax.print.SimpleDoc;
@@ -313,7 +312,6 @@ public final class Printer
         } 
         catch (IOException ex) 
         {
-            Logger.getLogger(Printer.class.getName()).log(Level.SEVERE, null, ex);
             return false;
         }
     }
