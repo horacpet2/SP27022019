@@ -72,10 +72,10 @@ public class MainWindow extends javax.swing.JFrame
                 
                 error_line_control(error_line);
                 error_line_control(error_line1);
-                
-                   
-                
+
                 controler_ref.update_order_list_by_scanner();
+                
+                controler_ref.check_db_connection();
             }
         }, 0, 1000);
      

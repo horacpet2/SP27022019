@@ -89,6 +89,7 @@ public class Controler extends Database
         if(is_connected() == false)
         {
             // this.error_message = "#1 Chyba spojení s databází!";
+            this.connect_db();
         }
         else
         {
