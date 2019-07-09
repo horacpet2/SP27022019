@@ -52,7 +52,18 @@ public class Controler extends Database
             }
             else
             {
-                if(this.orderService.containItemWithID(ID))
+                update_order_list(ID, item_quantity);
+                
+                return true;
+            }
+        }
+
+        return false;
+    }
+    
+    private void update_order_list(int ID, int item_quantity)
+    {
+        if(this.orderService.containItemWithID(ID))
                 { 
                     if(item_quantity+1 >= this.orderService.findOrderItemByID(ID).getQuantity())
                     {
@@ -61,7 +72,6 @@ public class Controler extends Database
                 }
                 else
                 {
-                    
                     if(this.get_available_item_quantity_by_ID(ID) >= 1)
                     {
                         String item_name = get_order_item_name_by_id(ID);
@@ -72,11 +82,6 @@ public class Controler extends Database
                     }
                     
                 }
-                return true;
-            }
-        }
-
-        return false;
     }
     
     public void check_db_connection()

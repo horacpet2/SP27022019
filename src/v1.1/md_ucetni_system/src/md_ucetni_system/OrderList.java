@@ -15,17 +15,15 @@ import java.util.TreeMap;
 public class OrderList 
 {
     private final ArrayList<OrderItem> orderList;
-    private final TreeMap<Integer, Integer> idTable;
     
     public OrderList()
     {
         this.orderList = new ArrayList<>();
-        this.idTable = new TreeMap<>();
     }
  
     public void addNewItem(int ID, String itemName, String ItemNameShortcut, double itemPrice)
     {
-        if(this.idTable.containsKey(ID) == false)
+        if(this.containItemWithID(ID) == false)
             putNewItemToOrderList(ID, itemName, ItemNameShortcut, itemPrice);
         else
             incrementItemQuantityByID(ID);
@@ -58,8 +56,7 @@ public class OrderList
         if(index >= 0 && index < this.orderList.size())
             return decrementItemIfNotNull(this.orderList.get(index));
         else
-            return false;
-            
+            return false;           
     }
     
     public double getOrderListTotalPrice()
@@ -86,7 +83,7 @@ public class OrderList
     
     public boolean removeItemByID(int ID)
     {
-        if(this.idTable.containsKey(ID))
+        if(this.containItemWithID(ID))
         {
             removeFromItemList(ID);
             return true;
@@ -99,14 +96,19 @@ public class OrderList
     
     public boolean containItemWithID(int ID)
     {
-        return this.idTable.containsKey(ID);
+        for(int i=0; i<this.orderList.size(); i++)
+        {
+            if(this.orderList.get(i).getID() == ID)
+                return true;
+        }
+        
+        return false;
     }
     
     public boolean removeItemByIndex(int index)
     {
         if(index >= 0 && index < this.orderList.size())
         {
-            this.idTable.remove(this.orderList.get(index).getID());
             this.orderList.remove(index);
             
             return true;            
@@ -118,13 +120,12 @@ public class OrderList
     public void clear()
     {
         this.orderList.clear();
-        this.idTable.clear();
     }
     
     public OrderItem findOrderItemByID(int ID)
     {   
-        if(this.idTable.containsKey(ID))
-            return this.orderList.get(this.idTable.get(ID));
+        if(this.containItemWithID(ID))
+            return this.orderList.get(this.getItemIndexByID(ID));
         else
             return null;
     }
@@ -133,7 +134,6 @@ public class OrderList
     {
         OrderItem newItem = new OrderItem(ID, itemName, ItemNameShortcut, itemPrice);
             
-        this.idTable.put(ID,this.orderList.size());
         this.orderList.add(newItem);
     }
     
@@ -166,8 +166,18 @@ public class OrderList
     
     private void removeFromItemList(int ID)
     {
-        this.orderList.remove((int) this.idTable.get(ID));
-        this.idTable.remove(ID);
+        this.orderList.remove(this.getItemIndexByID(ID));
+    }
+    
+    private int getItemIndexByID(int ID)
+    {
+        for(int i = 0; i < this.orderList.size(); i++)
+        {
+            if(this.orderList.get(i).getID() == ID)
+                return i;
+        }
+        
+        return -1;
     }
     
     private void removeFromItemListIfQuantityEqualsZero(OrderItem item)
