@@ -13,10 +13,11 @@
 
 /********************* definice konstant *******************************/
 
-#define TEST TRUE
+#define TEST FALSE
 
 
 #define CONF_WINDOW_TITLE "Pokladní systém"
+#define CONF_COMPANY_ICON_PATH "img/logo-mlyn-dubecko.png"
 
 
 /******************** deklarace struktur *******************************/
@@ -190,7 +191,7 @@ struct _view_base_
 	uint32_t screen_height;
 
 	double window_width_ratio;
-	double window_height_ration;
+	double window_height_ratio;
 };
 
 struct _view_base_screen_
@@ -277,6 +278,8 @@ order_item * order_item_new();
 void order_item_finalize(order_item * this);
 
 view * view_new(controler * controler_ref);
+bool view_load_company_icon(view * this);
+void view_pack_container(view * this);
 void view_hide_cursor(view * this);
 void view_initialize(view * this);
 void view_build_main_window(view * this);
@@ -289,10 +292,11 @@ void view_finalize(GtkWidget * widget, void * param);
 view_base * view_base_new(controler * controler_ref, uint32_t window_base_width, uint32_t window_base_height);
 void view_base_set_current_window_geometry(view_base * this, uint32_t window_width, uint32_t window_height);
 void view_base_read_current_screen_geometry(view_base * this);
-double view_base_get_window_width_ratio(view_base * this);
-double view_base_get_window_height_ratio(view_base * this);
-double view_base_recount_horizontal_position_by_ratio(view_base * this, uint32_t base_position);
-double view_base_recount_vertical_position_by_ratio(view_base * this, uint32_t base_position);
+void view_base_count_ratio(view_base * this);
+double view_base_recount_horizontal_geometry_by_ratio(view_base * this, uint32_t base_position);
+double view_base_recount_vertical_geometry_by_ratio(view_base * this, uint32_t base_position);
+GdkPixbuf * view_base_load_image(char * image_address);
+GdkPixbuf * view_base_scale_icon(GdkPixbuf * icon, uint8_t dimension, double new_size);
 void view_base_finalize(view_base * this);
 
 view_base_screen * view_base_screen_new(view_base * view_base_ref);
@@ -550,43 +554,42 @@ void view_base_set_current_window_geometry(view_base * this, uint32_t window_wid
 void view_base_read_current_screen_geometry(view_base * this)
 {
 	GdkRectangle geometry;
+
 	GdkDisplay* display = gdk_display_get_default();
         GdkMonitor* monitor = gdk_display_get_monitor(display, 0);
         gdk_monitor_get_workarea(monitor, &geometry);
 
 	this->screen_width = geometry.width;
 	this->screen_height = geometry.height;
+
+	view_base_count_ratio(this);
 }
 
-double view_base_get_window_width_ratio(view_base * this)
+void view_base_count_ratio(view_base * this)
+{
+	this->window_width_ratio = ((double)this->screen_width)/((double)this->window_base_width);
+	this->window_height_ratio = ((double) this->screen_height)/((double)this->window_base_height);
+}
+
+double view_base_recount_horizontal_geometry_by_ratio(view_base * this, uint32_t base_position)
 {
 	return 0;
 }
 
-double view_base_get_window_height_ratio(view_base * this)
+double view_base_recount_vertical_geometry_by_ratio(view_base * this, uint32_t base_position)
 {
 	return 0;
 }
 
-double view_base_recount_horizontal_position_by_ratio(view_base * this, uint32_t base_position)
-{
-	return 0;
-}
-
-double view_base_recount_vertical_position_by_ratio(view_base * this, uint32_t base_position)
-{
-	return 0;
-}
-
-GdkPixbuf * gui_base_load_icon(char * addr)
+GdkPixbuf * view_base_load_image(char * image_address)
 {
 	GError * error = NULL;
-	GdkPixbuf * icon = gdk_pixbuf_new_from_file(addr, &error);
+	GdkPixbuf * image = gdk_pixbuf_new_from_file(image_address, &error);
 
-	return icon;
+	return image;
 }
 
-GdkPixbuf * gui_base_scale_icon(GdkPixbuf * icon, uint8_t dimension, double new_size)
+GdkPixbuf * view_base_scale_icon(GdkPixbuf * icon, uint8_t dimension, double new_size)
 {
 	GdkPixbuf* scaled_icon = NULL;
 
@@ -628,6 +631,10 @@ view * view_new(controler * controler_ref)
 	view_build_screens(this);
 	view_pack_screens(this);
 
+	view_load_company_icon(this);
+
+	view_pack_container(this);
+
 	return this;
 }
 
@@ -642,7 +649,7 @@ void view_hide_cursor(view * this)
 void view_initialize(view * this)
 {
 	gtk_widget_show_all(this->window);
-	view_hide_cursor(this);
+	//view_hide_cursor(this);
 }
 
 void view_build_main_window(view * this)
@@ -653,11 +660,34 @@ void view_build_main_window(view * this)
 	gtk_window_set_title(GTK_WINDOW(this->window), CONF_WINDOW_TITLE);
 	gtk_window_set_position(GTK_WINDOW(this->window), GTK_WIN_POS_CENTER_ALWAYS);
 	gtk_window_fullscreen (GTK_WINDOW(this->window));
+	gtk_window_set_resizable(GTK_WINDOW(this->window), FALSE);
 
 	this->container = gtk_fixed_new();
 	gtk_container_add(GTK_CONTAINER(this->window), this->container);
 }
 
+
+bool view_load_company_icon(view * this)
+{
+	GdkPixbuf * icon = view_base_load_image(CONF_COMPANY_ICON_PATH);
+
+	if(icon != NULL)
+	{
+		icon = view_base_scale_icon(icon, 1, 200*this->view_base_ref->window_height_ratio);
+		//this->company_icon = gtk_image_new_from_pixbuf(icon);
+		this->company_icon = gtk_event_box_new();
+		gtk_container_add(GTK_CONTAINER(this->company_icon), gtk_image_new_from_pixbuf(icon));
+		gtk_widget_add_events(this->company_icon, GDK_2BUTTON_PRESS);
+	
+		return true;
+	}
+	else
+	{
+		this->company_icon = NULL;
+
+		return false;
+	}
+}
 
 void view_initialize_base_class(view * this)
 {
@@ -679,10 +709,21 @@ void view_pack_screens(view * this)
 
 }
 
+void view_pack_container(view * this)
+{
+	if(this->company_icon != NULL)
+	{
+		gtk_fixed_put(GTK_FIXED(this->container), 
+				this->company_icon, 
+				300,200);	
+	}
+
+}  
 
 void view_signals(view * this)
 {
-	g_signal_connect(G_OBJECT(this->window), "destroy", G_CALLBACK(view_finalize), this);
+	//g_signal_connect(G_OBJECT(this->window), "destroy", G_CALLBACK(view_finalize), this);
+	g_signal_connect(G_OBJECT(this->company_icon), "button_press_event", G_CALLBACK(view_finalize), this);
 
 	view_bill_viewer_screen_signals(this->view_bill_viewer_screen_ref);
 	view_order_screen_signals(this->view_order_screen_ref);
@@ -690,8 +731,6 @@ void view_signals(view * this)
 	view_settings_screen_signals(this->view_settings_screen_ref);
 	view_order_finish_screen_signals(this->view_order_finish_screen_ref);
 }
-
-
 
 void view_finalize(GtkWidget * widget, void * param)
 {
