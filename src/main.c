@@ -4,15 +4,16 @@
 #include <stdbool.h>
 #include <gtk/gtk.h>
 #include <string.h>
+#include <stdarg.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
-#include <Winspooler.h>
+#include <Winspool.h>
 #endif
 
 /********************* definice konstant *******************************/
 
-#define TEST FALSE
+#define TEST TRUE
 
 
 #define CONF_WINDOW_TITLE "Pokladní systém"
@@ -134,7 +135,7 @@ struct _database_
 struct _order_list_
 {
 	order_service * order_service_ref;
-	
+
 };
 
 struct _order_service_
@@ -158,6 +159,8 @@ struct _order_item_
 struct _view_
 {
 	GtkWidget * window;
+	GtkWidget * container;
+	GtkWidget * company_icon;
 
 	controler * controler_ref;
 	view_base * view_base_ref;
@@ -167,14 +170,14 @@ struct _view_
 	view_manual_input_screen * view_manual_input_screen_ref;
 	view_settings_screen * view_settings_screen_ref;
 	view_order_finish_screen * view_order_finish_screen_ref;
-	
+
 	alarm_widget * alarm_widget_ref;
 };
 
 struct _view_base_
 {
 	controler * controler_ref;
-	
+
 	GtkWidget * stack_container;
 
 	uint32_t window_base_width;
@@ -182,7 +185,7 @@ struct _view_base_
 
 	uint32_t window_width;
 	uint32_t window_height;
-	
+
 	uint32_t screen_width;
 	uint32_t screen_height;
 
@@ -228,8 +231,8 @@ struct _view_order_finish_screen_
 struct _alarm_widget_
 {
 	GtkWidget * draw_area;
-	
-	alarm_buffer * alarm_buffer_ref;	
+
+	alarm_buffer * alarm_buffer_ref;
 
 	uint32_t width;
 	uint32_t height;
@@ -425,7 +428,7 @@ printer * printer_new()
 void printer_finalize(printer * this)
 {
 	free(this);
-}	
+}
 
 
 /************************** modul alarm_buffer **************************/
@@ -477,7 +480,7 @@ void order_list_finalize(order_list * this)
 order_service * order_service_new()
 {
 	order_service * this = (order_service*) malloc(sizeof(order_service));
-	
+
 	this->hand_scanner_ref = hand_scanner_new();
 
 	return this;
@@ -550,7 +553,7 @@ void view_base_read_current_screen_geometry(view_base * this)
 	GdkDisplay* display = gdk_display_get_default();
         GdkMonitor* monitor = gdk_display_get_monitor(display, 0);
         gdk_monitor_get_workarea(monitor, &geometry);
-	
+
 	this->screen_width = geometry.width;
 	this->screen_height = geometry.height;
 }
@@ -575,10 +578,39 @@ double view_base_recount_vertical_position_by_ratio(view_base * this, uint32_t b
 	return 0;
 }
 
+GdkPixbuf * gui_base_load_icon(char * addr)
+{
+	GError * error = NULL;
+	GdkPixbuf * icon = gdk_pixbuf_new_from_file(addr, &error);
+
+	return icon;
+}
+
+GdkPixbuf * gui_base_scale_icon(GdkPixbuf * icon, uint8_t dimension, double new_size)
+{
+	GdkPixbuf* scaled_icon = NULL;
+
+	if(icon != NULL)
+	{
+		if(dimension == 0)
+		{
+			double scale = (((double) new_size)/((double)gdk_pixbuf_get_height(icon))) * ((double)gdk_pixbuf_get_width(icon));
+			scaled_icon = gdk_pixbuf_scale_simple (icon, (int) scale, new_size, GDK_INTERP_HYPER);
+		}
+		else
+		{
+			double scale = (((double) new_size)/((double)gdk_pixbuf_get_width(icon))) * ((double)gdk_pixbuf_get_height(icon));
+			scaled_icon = gdk_pixbuf_scale_simple (icon, (int) new_size, scale, GDK_INTERP_HYPER);
+		}
+	}
+
+	return scaled_icon;
+}
+
+
 void view_base_finalize(view_base * this)
 {
 	controler_finalize(this->controler_ref);
-
 	free(this);
 }
 
@@ -595,14 +627,16 @@ view * view_new(controler * controler_ref)
 
 	view_build_screens(this);
 	view_pack_screens(this);
-	
+
 	return this;
 }
 
 
 void view_hide_cursor(view * this)
 {
-
+	GdkCursor * cursor = gdk_cursor_new_for_display(gdk_display_get_default(), GDK_BLANK_CURSOR);
+	GdkWindow * win = gtk_widget_get_window((this->window));
+	gdk_window_set_cursor((win), cursor);
 }
 
 void view_initialize(view * this)
@@ -619,14 +653,15 @@ void view_build_main_window(view * this)
 	gtk_window_set_title(GTK_WINDOW(this->window), CONF_WINDOW_TITLE);
 	gtk_window_set_position(GTK_WINDOW(this->window), GTK_WIN_POS_CENTER_ALWAYS);
 	gtk_window_fullscreen (GTK_WINDOW(this->window));
-	
-	gtk_container_add(GTK_CONTAINER(this->window), this->view_base_ref->stack_container);
+
+	this->container = gtk_fixed_new();
+	gtk_container_add(GTK_CONTAINER(this->window), this->container);
 }
 
 
 void view_initialize_base_class(view * this)
 {
-	this->view_base_ref = view_base_new(this->controler_ref, 800, 600);	
+	this->view_base_ref = view_base_new(this->controler_ref, 800, 600);
 	view_base_set_current_window_geometry(this->view_base_ref, this->view_base_ref->screen_width, this->view_base_ref->screen_height);
 }
 
@@ -648,7 +683,7 @@ void view_pack_screens(view * this)
 void view_signals(view * this)
 {
 	g_signal_connect(G_OBJECT(this->window), "destroy", G_CALLBACK(view_finalize), this);
-	
+
 	view_bill_viewer_screen_signals(this->view_bill_viewer_screen_ref);
 	view_order_screen_signals(this->view_order_screen_ref);
 	view_manual_input_screen_signals(this->view_manual_input_screen_ref);
@@ -717,7 +752,7 @@ void view_bill_viewer_screen_pack_widgets(view_bill_viewer_screen * this)
 
 void view_bill_viewer_screen_signals(view_bill_viewer_screen * this)
 {
-	
+
 }
 
 void view_bill_viewer_screen_finalize(view_bill_viewer_screen * this)
@@ -772,7 +807,7 @@ view_manual_input_screen * view_manual_input_screen_new(view_base * view_base_re
 	this->base_screen_ref = view_base_screen_new(view_base_ref);
 
 	view_manual_input_screen_build_widgets(this);
-	view_manual_input_screen_pack_widgets(this);	
+	view_manual_input_screen_pack_widgets(this);
 
 	return this;
 }
@@ -912,10 +947,19 @@ void assert(bool condition, char * comment, ...)
 {
 	if(condition == false)
 	{
-		printf(comment);
+		va_list params;
+		va_start(params, comment);
+
+		vprintf(comment, params);
+
+		va_end(params);
 	}
 }
 
+void unit_test_runtime()
+{
+	assert(false, "komentař: %d+%d=%d", 1,2,3);
+}
 
 
 #endif
@@ -933,7 +977,7 @@ int main(int argv, char ** argc)
 	if(controler_ref != NULL)
 	{
 		gtk_init(&argv, &argc);
-	
+
 		view_ref = view_new(controler_ref);
 		view_signals(view_ref);
 		view_initialize(view_ref);
@@ -943,10 +987,9 @@ int main(int argv, char ** argc)
 	else
 	{
 		printf("Nelze inicializovat jádro!");
-	}	
+	}
 #else
-
+	unit_test_runtime();
 #endif
 	return 0;
 }
-
