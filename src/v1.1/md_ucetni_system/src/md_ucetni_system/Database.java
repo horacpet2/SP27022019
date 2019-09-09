@@ -27,7 +27,7 @@ public class Database extends Printer
         try
         {
             Class.forName("com.mysql.jdbc.Driver");
-            con = DriverManager.getConnection("jdbc:mysql://localhost:3306/property", "cashdesk", "asdfghjkl");
+            con = DriverManager.getConnection("jdbc:mysql://192.168.0.1:3306/stock", "cashdesk", "asdfghjkl");
             stat = con.createStatement();
             
             return true;
@@ -54,6 +54,7 @@ public class Database extends Printer
             } 
             catch (SQLException ex) 
             {
+                System.out.println("chyba nezname ID: "+ID);
                 return null;
             }
         }
@@ -65,7 +66,7 @@ public class Database extends Printer
     {
         if(this.is_connected() == true)
         {
-            /*
+            
             try 
             {
                 rs = stat.executeQuery("select item_shortcut_name from available_items where item_id="+Integer.toString(ID)+";");
@@ -77,14 +78,13 @@ public class Database extends Printer
             } 
             catch (SQLException ex) 
             {
-                return null;
+                return "unknown";
             }
-            */
             
-            return "";
+            return "unknown";
         }
         
-        return null;
+        return "unknown";
     }
     
     /*
@@ -157,7 +157,7 @@ public class Database extends Printer
         {
             try 
             {
-                rs = stat.executeQuery("select item_quantiti from available_items where item_id="+Integer.toString(ID)+";");
+                rs = stat.executeQuery("select item_quantity from available_items where item_id="+Integer.toString(ID)+";");
 
                 if(rs.next())
                      return rs.getInt(1);
@@ -181,7 +181,7 @@ public class Database extends Printer
         {
             try
             {
-                String query = " update available_items set item_quantiti="+Integer.toString(new_amount)+" where item_id="+Integer.toString(ID)+";";
+                String query = " update available_items set item_quantity="+Integer.toString(new_amount)+" where item_id="+Integer.toString(ID)+";";
                 PreparedStatement preparedStmt = this.con.prepareStatement(query); 
 
                 preparedStmt.execute();

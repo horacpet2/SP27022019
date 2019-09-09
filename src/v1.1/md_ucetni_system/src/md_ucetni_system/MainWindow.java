@@ -15,7 +15,6 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.TreeMap;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -140,6 +139,7 @@ public class MainWindow extends javax.swing.JFrame
             {
                 if(((this.man_input_btn_offset*15)+i) <= max-1)
                 {
+                    System.out.println(this.controler_ref.get_item_name_by_ID((this.man_input_btn_offset*15)+i));
                     btn_man_input.setEnabled(true);
                     btn_man_input.setText(this.controler_ref.get_item_name_by_ID((this.man_input_btn_offset*15)+i));
                 }

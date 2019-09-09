@@ -1,8 +1,21 @@
+
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+** Jádro systému, které propojuje jednotlivé dílčí moduly: Printer, Database, Scanner, EET
+** 
+**
+**
+**
+**
+** chybové stavy:
+** 1 - chyba spojení s databází!
+** 2 - neznámé ID objednávky!
+** 3 - Neznámá pozice objednávky!
+** 4 - Tisk účtenky nebyl úspěšný!
+** 5 - Chyba načítání dat, něco se stalo s databází!
+** 6 - Nedostatek skladových zásob
+** 7 - Chyba při aktualizaci skladových zásob
+*/
+
 package md_ucetni_system;
 
 import java.util.ArrayList;
@@ -26,7 +39,7 @@ public class Controler extends Database
         this.error_message = new String();        
         this.platform = get_running_platform(System.getProperty("os.name"));
         
-        if(connect_db() == false)
+        if(this.connect_db() == false)
         {
             this.error_message = "#1 Chyba spojení s databází!";
         }
@@ -88,8 +101,8 @@ public class Controler extends Database
     {
         if(is_connected() == false)
         {
-            // this.error_message = "#1 Chyba spojení s databází!";
-            this.connect_db();
+            if(this.connect_db() == false)
+                this.error_message = "#1 Chyba spojení s databází!";
         }
         else
         {
