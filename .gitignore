@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 *.swp
 *.o
 
@@ -8,4 +9,16 @@
 /src/v1.1/JavaApplication3/nbproject/private/
 /src/v1.1/md_ucetni_system/nbproject/private/
 /src/v1.1/md_ucetni_system/build/
+=======
+*.swp
+*.o
+
+
+/prototype/epson_prototype/nbproject/private/
+/prototype/epson_prototype/build/
+/prototype/epson_prototype/dist/
+/src/v1.1/JavaApplication3/nbproject/private/
+/src/v1.1/md_ucetni_system/nbproject/private/
+/src/v1.1/md_ucetni_system/build/
+>>>>>>> a36f5b59edf51fdb800107f9224c77bc85311179
 /src/v1.1/md_ucetni_system/dist/
