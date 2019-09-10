@@ -18,7 +18,20 @@
 
 #define CONF_WINDOW_TITLE "Pokladní systém"
 #define CONF_COMPANY_ICON_PATH "img/logo-mlyn-dubecko.png"
+#define CONF_CYCLIC_INTERUPT_INTERVAL 1000
 
+enum _side_orientation_
+{
+	x_axis = 0,
+	y_axis
+};
+
+enum _lang_index_description_
+{
+	lang_cz = 0,
+
+	lang_num	
+};
 
 /******************** deklarace struktur *******************************/
 
@@ -66,6 +79,12 @@ typedef struct _view_base_ view_base;
 
 struct _view_base_screen_;
 typedef struct _view_base_screen_ view_base_screen;
+
+struct _multi_lang_;
+typedef struct _multi_lang_ multi_lang;
+
+struct _lang_;
+typedef struct _lang_ lang;
 
 struct _view_bill_viewer_screen_;
 typedef struct _view_bill_viewer_screen_ view_bill_viewer_screen;
@@ -125,6 +144,9 @@ struct _printer_
 
 struct _alarm_buffer_
 {
+	bool error;
+	bool warning;
+
 
 };
 
@@ -181,6 +203,8 @@ struct _view_base_
 
 	GtkWidget * stack_container;
 
+	multi_lang * multi_lang_ref;
+
 	uint32_t window_base_width;
 	uint32_t window_base_height;
 
@@ -198,6 +222,20 @@ struct _view_base_screen_
 {
 	GtkWidget * container;
 	view_base * view_base_ref;
+};
+
+
+struct _multi_lang_
+{
+	uint8_t language_index;
+
+	lang ** lang_struct;
+};
+
+
+struct _lang_
+{
+
 };
 
 struct _view_bill_viewer_screen_
@@ -237,6 +275,8 @@ struct _alarm_widget_
 
 	uint32_t width;
 	uint32_t height;
+
+	bool blink;
 };
 
 
@@ -260,6 +300,7 @@ printer * printer_new();
 void printer_finalize(printer * this);
 
 alarm_buffer * alarm_buffer_new();
+void alarm_buffer_reset_error(alarm_buffer * this);
 void alarm_buffer_finalize(alarm_buffer * this);
 
 database * database_new();
@@ -278,29 +319,50 @@ order_item * order_item_new();
 void order_item_finalize(order_item * this);
 
 view * view_new(controler * controler_ref);
+gboolean view_cyclic_interupt(gpointer param);
 bool view_load_company_icon(view * this);
 void view_pack_container(view * this);
 void view_hide_cursor(view * this);
 void view_initialize(view * this);
 void view_build_main_window(view * this);
 void view_build_screens(view * this);
+void view_build_alarm_widget(view * this);
 void view_pack_screens(view * this);
 void view_initialize_base_class(view * this);
 void view_signals(view * this);
-void view_finalize(GtkWidget * widget, void * param);
+void view_finalize(view * this);
+void view_window_exit_callback(GtkWidget * widget, gpointer param);
+void view_close_callback(GtkWidget * widget, GdkEventButton * event, gpointer * param);
 
 view_base * view_base_new(controler * controler_ref, uint32_t window_base_width, uint32_t window_base_height);
 void view_base_set_current_window_geometry(view_base * this, uint32_t window_width, uint32_t window_height);
 void view_base_read_current_screen_geometry(view_base * this);
+void view_base_show_order_screen(view_base * this);
+void view_base_show_settings_screen(view_base * this);
+void view_base_show_order_finish_screen(view_base * this);
+void view_base_show_bill_viewer_screen(view_base * this);
+void view_base_show_manual_input_screen(view_base * this);
 void view_base_count_ratio(view_base * this);
 double view_base_recount_horizontal_geometry_by_ratio(view_base * this, uint32_t base_position);
 double view_base_recount_vertical_geometry_by_ratio(view_base * this, uint32_t base_position);
 GdkPixbuf * view_base_load_image(char * image_address);
-GdkPixbuf * view_base_scale_icon(GdkPixbuf * icon, uint8_t dimension, double new_size);
+GdkPixbuf * view_base_scale_icon(GdkPixbuf * icon, enum _side_orientation_ axis, double new_size);
 void view_base_finalize(view_base * this);
 
 view_base_screen * view_base_screen_new(view_base * view_base_ref);
 void view_base_screen_finalize(view_base_screen * this);
+
+multi_lang * multi_lang_new();
+lang * multi_lang_get_current_language(multi_lang * this);
+void multi_lang_initialize_language_structure(multi_lang * this);
+void multi_lang_initialize_czech_text(multi_lang * this);
+void multi_lang_set_alarm_text_czech(lang * this);
+void multi_lang_set_order_screen_text_czech(lang * this);
+void multi_lang_set_manual_input_screen_text_czech(lang * this);
+void multi_lang_set_order_finish_screen_text_czech(lang * this);
+void multi_lang_set_settings_screen_text_czech(lang * this);
+void multi_lang_set_bill_viewer_screen_text_czech(lang * this);
+void multi_lang_finalize(multi_lang * this);
 
 view_bill_viewer_screen * view_bill_viewer_screen_new(view_base * view_base_ref);
 void view_bill_viewer_screen_build_widgets(view_bill_viewer_screen * this);
@@ -333,6 +395,8 @@ void view_order_finish_screen_signals(view_order_finish_screen * this);
 void view_order_finish_screen_finalize(view_order_finish_screen * this);
 
 alarm_widget * alarm_widget_new(alarm_buffer * alarm_buffer_ref, uint32_t width, uint32_t height);
+gboolean alarm_widget_draw_callback(GtkWidget * drawing_area, cairo_t * cr, gpointer param);
+void alarm_widget_reset_error_buffer_callback(GtkWidget * widget, GdkEventButton * event, gpointer param);
 void alarm_widget_build(alarm_widget * this);
 void alarm_widget_signals(alarm_widget * this);
 void alarm_widget_finalize(alarm_widget * this);
@@ -439,8 +503,17 @@ void printer_finalize(printer * this)
 alarm_buffer * alarm_buffer_new()
 {
 	alarm_buffer * this = (alarm_buffer*) malloc(sizeof(alarm_buffer));
+	
+	this->error = true;
+	this->warning = false;
 
 	return this;
+}
+
+
+void alarm_buffer_reset_error(alarm_buffer * this)
+{
+
 }
 
 void alarm_buffer_finalize(alarm_buffer * this)
@@ -542,6 +615,8 @@ view_base * view_base_new(controler * controler_ref, uint32_t window_base_width,
 
 	view_base_read_current_screen_geometry(this);
 
+	this->multi_lang_ref = multi_lang_new();
+
 	return this;
 }
 
@@ -549,6 +624,31 @@ void view_base_set_current_window_geometry(view_base * this, uint32_t window_wid
 {
 	this->window_width = window_width;
 	this->window_height = window_height;
+}
+
+void view_base_show_order_screen(view_base * this)
+{
+	gtk_stack_set_visible_child_name(GTK_STACK(this->stack_container), "order_screen");
+}
+
+void view_base_show_settings_screen(view_base * this)
+{
+	gtk_stack_set_visible_child_name(GTK_STACK(this->stack_container), "settings_screen");
+}
+
+void view_base_show_order_finish_screen(view_base * this)
+{
+	gtk_stack_set_visible_child_name(GTK_STACK(this->stack_container), "order_finish_screen");
+}
+
+void view_base_show_bill_viewer_screen(view_base * this)
+{
+	gtk_stack_set_visible_child_name(GTK_STACK(this->stack_container), "bill_viewer_screen");
+}
+
+void view_base_show_manual_input_screen(view_base * this)
+{
+	gtk_stack_set_visible_child_name(GTK_STACK(this->stack_container), "manual_input_screen");
 }
 
 void view_base_read_current_screen_geometry(view_base * this)
@@ -567,18 +667,18 @@ void view_base_read_current_screen_geometry(view_base * this)
 
 void view_base_count_ratio(view_base * this)
 {
-	this->window_width_ratio = ((double)this->screen_width)/((double)this->window_base_width);
-	this->window_height_ratio = ((double) this->screen_height)/((double)this->window_base_height);
+	this->window_width_ratio = ((double) this->screen_width) / ((double) this->window_base_width);
+	this->window_height_ratio = ((double) this->screen_height) / ((double) this->window_base_height);
 }
 
 double view_base_recount_horizontal_geometry_by_ratio(view_base * this, uint32_t base_position)
 {
-	return 0;
+	return (this->window_width_ratio * ((double) base_position));
 }
 
 double view_base_recount_vertical_geometry_by_ratio(view_base * this, uint32_t base_position)
 {
-	return 0;
+	return (this->window_height_ratio * ((double) base_position));
 }
 
 GdkPixbuf * view_base_load_image(char * image_address)
@@ -589,13 +689,13 @@ GdkPixbuf * view_base_load_image(char * image_address)
 	return image;
 }
 
-GdkPixbuf * view_base_scale_icon(GdkPixbuf * icon, uint8_t dimension, double new_size)
+GdkPixbuf * view_base_scale_icon(GdkPixbuf * icon, enum _side_orientation_ axis, double new_size)
 {
 	GdkPixbuf* scaled_icon = NULL;
 
 	if(icon != NULL)
 	{
-		if(dimension == 0)
+		if(axis == y_axis)
 		{
 			double scale = (((double) new_size)/((double)gdk_pixbuf_get_height(icon))) * ((double)gdk_pixbuf_get_width(icon));
 			scaled_icon = gdk_pixbuf_scale_simple (icon, (int) scale, new_size, GDK_INTERP_HYPER);
@@ -614,6 +714,8 @@ GdkPixbuf * view_base_scale_icon(GdkPixbuf * icon, uint8_t dimension, double new
 void view_base_finalize(view_base * this)
 {
 	controler_finalize(this->controler_ref);
+	multi_lang_finalize(this->multi_lang_ref);
+
 	free(this);
 }
 
@@ -628,6 +730,8 @@ view * view_new(controler * controler_ref)
 	view_initialize_base_class(this);
 	view_build_main_window(this);
 
+	view_build_alarm_widget(this);
+
 	view_build_screens(this);
 	view_pack_screens(this);
 
@@ -635,7 +739,19 @@ view * view_new(controler * controler_ref)
 
 	view_pack_container(this);
 
+	g_timeout_add(CONF_CYCLIC_INTERUPT_INTERVAL, view_cyclic_interupt, this);
+
 	return this;
+}
+
+
+gboolean view_cyclic_interupt(gpointer param)
+{
+	view * this = (view*) param;
+
+	gtk_widget_queue_draw(GTK_WIDGET(this->window));
+
+	return TRUE;
 }
 
 
@@ -648,6 +764,7 @@ void view_hide_cursor(view * this)
 
 void view_initialize(view * this)
 {
+	view_base_show_order_screen(this->view_base_ref);
 	gtk_widget_show_all(this->window);
 	//view_hide_cursor(this);
 }
@@ -656,7 +773,10 @@ void view_build_main_window(view * this)
 {
 	this->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
-	gtk_window_set_default_size(GTK_WINDOW(this->window), this->view_base_ref->screen_width, this->view_base_ref->screen_height);
+	gtk_window_set_default_size(GTK_WINDOW(this->window), 
+					this->view_base_ref->screen_width, 
+					this->view_base_ref->screen_height);
+
 	gtk_window_set_title(GTK_WINDOW(this->window), CONF_WINDOW_TITLE);
 	gtk_window_set_position(GTK_WINDOW(this->window), GTK_WIN_POS_CENTER_ALWAYS);
 	gtk_window_fullscreen (GTK_WINDOW(this->window));
@@ -673,11 +793,16 @@ bool view_load_company_icon(view * this)
 
 	if(icon != NULL)
 	{
-		icon = view_base_scale_icon(icon, 1, 200*this->view_base_ref->window_height_ratio);
-		//this->company_icon = gtk_image_new_from_pixbuf(icon);
+		icon = view_base_scale_icon(icon, x_axis, 200*this->view_base_ref->window_height_ratio);
+
 		this->company_icon = gtk_event_box_new();
 		gtk_container_add(GTK_CONTAINER(this->company_icon), gtk_image_new_from_pixbuf(icon));
-		gtk_widget_add_events(this->company_icon, GDK_2BUTTON_PRESS);
+
+		gtk_widget_set_size_request(GTK_WIDGET(this->company_icon), 
+						gdk_pixbuf_get_width(icon), 
+						gdk_pixbuf_get_height(icon));
+
+		gtk_widget_add_events(this->company_icon, GDK_BUTTON_PRESS_MASK);
 	
 		return true;
 	}
@@ -692,7 +817,9 @@ bool view_load_company_icon(view * this)
 void view_initialize_base_class(view * this)
 {
 	this->view_base_ref = view_base_new(this->controler_ref, 800, 600);
-	view_base_set_current_window_geometry(this->view_base_ref, this->view_base_ref->screen_width, this->view_base_ref->screen_height);
+	view_base_set_current_window_geometry(this->view_base_ref, 
+						this->view_base_ref->screen_width, 
+						this->view_base_ref->screen_height);
 }
 
 void view_build_screens(view * this)
@@ -704,9 +831,35 @@ void view_build_screens(view * this)
 	this->view_order_finish_screen_ref = view_order_finish_screen_new(this->view_base_ref);
 }
 
+void view_build_alarm_widget(view * this)
+{
+	this->alarm_widget_ref = alarm_widget_new(this->view_base_ref->controler_ref->alarm_buffer_ref, 
+					this->view_base_ref->window_width, 
+					view_base_recount_vertical_geometry_by_ratio(this->view_base_ref, 25));
+
+}
+
 void view_pack_screens(view * this)
 {
+	gtk_stack_add_named(GTK_STACK(this->view_base_ref->stack_container), 
+				this->view_bill_viewer_screen_ref->base_screen_ref->container, 
+				"bill_viewer_screen");
 
+	gtk_stack_add_named(GTK_STACK(this->view_base_ref->stack_container),
+				this->view_order_screen_ref->base_screen_ref->container,
+				"order_screen");
+
+	gtk_stack_add_named(GTK_STACK(this->view_base_ref->stack_container),
+				this->view_manual_input_screen_ref->base_screen_ref->container,
+				"manual_input_screen");
+
+	gtk_stack_add_named(GTK_STACK(this->view_base_ref->stack_container), 
+				this->view_settings_screen_ref->base_screen_ref->container,
+				"settings_screen");
+
+	gtk_stack_add_named(GTK_STACK(this->view_base_ref->stack_container),
+				this->view_order_finish_screen_ref->base_screen_ref->container,
+				"order_finish_screen");
 }
 
 void view_pack_container(view * this)
@@ -715,27 +868,44 @@ void view_pack_container(view * this)
 	{
 		gtk_fixed_put(GTK_FIXED(this->container), 
 				this->company_icon, 
-				300,200);	
+				view_base_recount_horizontal_geometry_by_ratio(this->view_base_ref, (this->view_base_ref->window_base_width-200)/2+25),
+				view_base_recount_vertical_geometry_by_ratio(this->view_base_ref, 50));	
 	}
 
+	gtk_fixed_put(GTK_FIXED(this->container), 
+			this->alarm_widget_ref->draw_area,
+			0,
+			view_base_recount_vertical_geometry_by_ratio(this->view_base_ref, 130));
+
+	gtk_fixed_put(GTK_FIXED(this->container),
+			this->view_base_ref->stack_container,
+			0,
+			view_base_recount_vertical_geometry_by_ratio(this->view_base_ref, 180));
 }  
 
 void view_signals(view * this)
 {
-	//g_signal_connect(G_OBJECT(this->window), "destroy", G_CALLBACK(view_finalize), this);
-	g_signal_connect(G_OBJECT(this->company_icon), "button_press_event", G_CALLBACK(view_finalize), this);
+	g_signal_connect(G_OBJECT(this->window), 
+				"destroy", 
+				G_CALLBACK(view_window_exit_callback), 
+				this);
+
+	g_signal_connect(G_OBJECT(this->company_icon), 
+				"button_press_event", 
+				G_CALLBACK(view_close_callback),
+			       	this);
 
 	view_bill_viewer_screen_signals(this->view_bill_viewer_screen_ref);
 	view_order_screen_signals(this->view_order_screen_ref);
 	view_manual_input_screen_signals(this->view_manual_input_screen_ref);
 	view_settings_screen_signals(this->view_settings_screen_ref);
 	view_order_finish_screen_signals(this->view_order_finish_screen_ref);
+
+	alarm_widget_signals(this->alarm_widget_ref);
 }
 
-void view_finalize(GtkWidget * widget, void * param)
+void view_finalize(view * this)
 {
-	view * this = (view*) param;
-
 	view_bill_viewer_screen_finalize(this->view_bill_viewer_screen_ref);
 	view_order_screen_finalize(this->view_order_screen_ref);
 	view_manual_input_screen_finalize(this->view_manual_input_screen_ref);
@@ -745,6 +915,22 @@ void view_finalize(GtkWidget * widget, void * param)
 	view_base_finalize(this->view_base_ref);
 
 	gtk_main_quit();
+}
+
+
+void view_window_exit_callback(GtkWidget * widget, gpointer param)
+{
+	view * this = (view*) param;
+	view_finalize(this);
+}
+
+void view_close_callback(GtkWidget * widget, GdkEventButton * event, gpointer * param)
+{
+	if(event->type == GDK_2BUTTON_PRESS)
+	{
+		view * this = (view*) param;
+		view_finalize(this);
+	}
 }
 
 /*************************** modul view_base_screen ****************************/
@@ -764,6 +950,97 @@ void view_base_screen_finalize(view_base_screen * this)
 {
 	free(this);
 }
+
+/*************************** modul multi_lang *********************************/
+
+multi_lang * multi_lang_new()
+{
+	multi_lang * this = (multi_lang*) malloc(sizeof(multi_lang));
+
+	this->language_index = lang_cz;
+	this->lang_struct = (lang **) malloc(sizeof(lang*));
+
+	multi_lang_initialize_language_structure(this);
+
+	multi_lang_initialize_czech_text(this);
+
+	return this;
+}
+
+void multi_lang_initialize_language_structure(multi_lang * this)
+{
+	for(uint8_t i; i < lang_num; i++)
+	{
+		this->lang_struct[i] = (lang*) malloc(sizeof(lang));
+	}
+}
+
+void multi_lang_initialize_czech_text(multi_lang * this)
+{
+	lang * lang_struct_cz = this->lang_struct[lang_cz];
+
+	multi_lang_set_alarm_text_czech(lang_struct_cz);
+	multi_lang_set_order_screen_text_czech(lang_struct_cz);
+	multi_lang_set_manual_input_screen_text_czech(lang_struct_cz);
+	multi_lang_set_order_finish_screen_text_czech(lang_struct_cz);
+	multi_lang_set_settings_screen_text_czech(lang_struct_cz);
+	multi_lang_set_bill_viewer_screen_text_czech(lang_struct_cz);
+}
+
+
+void multi_lang_set_alarm_text_czech(lang * this)
+{
+
+}
+
+void multi_lang_set_order_screen_text_czech(lang * this)
+{
+
+}
+
+void multi_lang_set_manual_input_screen_text_czech(lang * this)
+{
+
+}
+
+void multi_lang_set_order_finish_screen_text_czech(lang * this)
+{
+
+}
+
+void multi_lang_set_settings_screen_text_czech(lang * this)
+{
+
+}
+
+void multi_lang_set_bill_viewer_screen_text_czech(lang * this)
+{
+
+}
+
+lang * multi_lang_get_current_language(multi_lang * this)
+{
+	if(this->language_index < lang_num)
+		return this->lang_struct[this->language_index];
+	else
+		return NULL;
+}
+
+void multi_lang_release_language_structures(multi_lang * this)
+{
+	for(uint8_t i; i< lang_num; i++)
+	{
+		free(this->lang_struct[i]);
+	}
+}
+
+void multi_lang_finalize(multi_lang * this)
+{
+	multi_lang_release_language_structures(this);
+
+	free(this);
+}
+
 
 /**************************** modul view_bill_viewer_screen ***********************/
 
@@ -910,8 +1187,6 @@ void view_settings_screen_finalize(view_settings_screen * this)
 	free(this);
 }
 
-
-
 view_order_finish_screen * view_order_finish_screen_new(view_base * view_base_ref)
 {
 
@@ -956,20 +1231,78 @@ alarm_widget * alarm_widget_new(alarm_buffer * alarm_buffer_ref, uint32_t width,
 	this->alarm_buffer_ref = alarm_buffer_ref;
 	this->width = width;
 	this->height = height;
+	this->blink = false;
 
 	alarm_widget_build(this);
 
 	return this;
 }
 
+gboolean alarm_widget_draw_callback(GtkWidget * drawing_area, cairo_t * cr, gpointer param)
+{
+	alarm_widget * this = (alarm_widget*) param;
+
+	if(this->alarm_buffer_ref->error == true)
+	{
+		gtk_widget_set_visible(GTK_WIDGET(this->draw_area), TRUE);
+
+		if(this->blink == true)
+			cairo_set_source_rgb(cr, 1,0,0);
+		else
+			cairo_set_source_rgb(cr, 1,0.60,0.1);
+
+		this->blink = !this->blink;
+	}
+	else if(this->alarm_buffer_ref->warning == true)
+	{
+		gtk_widget_set_visible(GTK_WIDGET(this->draw_area), TRUE);
+		cairo_set_source_rgb(cr, 1,0.5,0.5);
+	}
+	else
+	{
+		gtk_widget_set_visible(GTK_WIDGET(this->draw_area), FALSE);
+	}
+
+	cairo_rectangle(cr, 0,0, this->width, this->height);
+
+	cairo_fill(cr);
+
+	/*
+	cairo_set_source_rgb(cr, 0.1, 0.1, 0.1);
+	cairo_set_font_size(cr, this->height/2);
+	cairo_select_font_face(cr, "Arial", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+	//cairo_move_to(cr, );
+	//cairo_show_text(cr, );
+
+	cairo_stroke(cr);
+*/
+	return FALSE;
+}
+
 void alarm_widget_build(alarm_widget * this)
 {
-
+	this->draw_area = gtk_drawing_area_new();
+	gtk_widget_set_size_request(GTK_WIDGET(this->draw_area), this->width, this->height);
+	gtk_widget_add_events(GTK_WIDGET(this->draw_area), GDK_BUTTON_PRESS_MASK);
 }
 
 void alarm_widget_signals(alarm_widget * this)
 {
+	g_signal_connect(G_OBJECT(this->draw_area), 
+				"draw", 
+				G_CALLBACK(alarm_widget_draw_callback), 
+				this);
 
+	g_signal_connect(G_OBJECT(this->draw_area), 
+				"button_press_event", 
+				G_CALLBACK(alarm_widget_reset_error_buffer_callback), 
+				this->alarm_buffer_ref);
+}
+
+void alarm_widget_reset_error_buffer_callback(GtkWidget * widget, GdkEventButton * event, gpointer param)
+{
+	alarm_buffer * this = (alarm_buffer*) param;
+	alarm_buffer_reset_error(this);
 }
 
 void alarm_widget_finalize(alarm_widget * this)
@@ -997,7 +1330,8 @@ void assert(bool condition, char * comment, ...)
 
 void unit_test_runtime()
 {
-	assert(false, "komentař: %d+%d=%d", 1,2,3);
+	test_case_view_base();
+	//assert(false, "komentař: %d+%d=%d", 1,2,3);
 }
 
 
@@ -1005,16 +1339,23 @@ void unit_test_runtime()
 
 
 /************************* hlavní výkonné vlákno (main) ***********************/
+
 int main(int argv, char ** argc)
 {
 #if TEST == FALSE
+
 	controler * controler_ref = NULL;
 	view * view_ref = NULL;
 
 	controler_ref = controler_new();
 
 	if(controler_ref != NULL)
-	{
+	{	
+		#if defined(_WIN32) || defined(_WIN64)
+			HWND var = GetConsoleWindow();
+			ShowWindow(var, SW_HIDE);
+		#endif
+
 		gtk_init(&argv, &argc);
 
 		view_ref = view_new(controler_ref);
@@ -1022,13 +1363,26 @@ int main(int argv, char ** argc)
 		view_initialize(view_ref);
 
 		gtk_main();
+
+		#if defined(_WIN32) || defined(_WIN64)
+			ShowWindow(var, SW_SHOW);
+		#endif
 	}
 	else
 	{
 		printf("Nelze inicializovat jádro!");
 	}
+
 #else
 	unit_test_runtime();
 #endif
 	return 0;
 }
+
+
+
+
+
+
+
+
