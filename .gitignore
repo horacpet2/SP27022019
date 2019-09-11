@@ -12,7 +12,7 @@
 =======
 *.swp
 *.o
-
+*.exe
 
 /prototype/epson_prototype/nbproject/private/
 /prototype/epson_prototype/build/

@@ -235,7 +235,19 @@ struct _multi_lang_
 
 struct _lang_
 {
+	const char * language_name;
 
+	const char * btn_clear_order_text;
+	const char * btn_increase_quantity_text;
+	const char * btn_decrease_quantity_text;
+	const char * btn_pay_text;
+	const char * btn_manual_input_text;
+	const char * lbl_sum_text;
+	const char * currency_text;
+	const char * order_list_widget_goods_text;
+	const char * order_list_widget_quantity_text;
+	const char * order_list_widget_price_without_tax_text;
+	const char * order_list_widget_price_with_tax_text;
 };
 
 struct _view_bill_viewer_screen_
@@ -246,7 +258,17 @@ struct _view_bill_viewer_screen_
 struct _view_order_screen_
 {
 	view_base_screen * base_screen_ref;
+	
+	GtkWidget * list;
 
+	GtkWidget * btn_clear_order;
+	GtkWidget * btn_increase_quantity;
+	GtkWidget * btn_decrease_quantity;
+	GtkWidget * btn_pay;
+	GtkWidget * btn_manual_input;
+
+	GtkWidget * lbl_sum_text;
+	GtkWidget * lbl_sum_price;
 };
 
 struct _view_manual_input_screen_
@@ -321,6 +343,7 @@ void order_item_finalize(order_item * this);
 view * view_new(controler * controler_ref);
 gboolean view_cyclic_interupt(gpointer param);
 bool view_load_company_icon(view * this);
+GtkWidget * view_initialize_company_icon_widget(GdkPixbuf * icon, double window_width_ratio);
 void view_pack_container(view * this);
 void view_hide_cursor(view * this);
 void view_initialize(view * this);
@@ -335,6 +358,7 @@ void view_window_exit_callback(GtkWidget * widget, gpointer param);
 void view_close_callback(GtkWidget * widget, GdkEventButton * event, gpointer * param);
 
 view_base * view_base_new(controler * controler_ref, uint32_t window_base_width, uint32_t window_base_height);
+void view_base_build_container(view_base * this);
 void view_base_set_current_window_geometry(view_base * this, uint32_t window_width, uint32_t window_height);
 void view_base_read_current_screen_geometry(view_base * this);
 void view_base_show_order_screen(view_base * this);
@@ -342,6 +366,7 @@ void view_base_show_settings_screen(view_base * this);
 void view_base_show_order_finish_screen(view_base * this);
 void view_base_show_bill_viewer_screen(view_base * this);
 void view_base_show_manual_input_screen(view_base * this);
+void view_base_set_label_markup_text(GtkWidget * label, const char * string, int font_size);
 void view_base_count_ratio(view_base * this);
 double view_base_recount_horizontal_geometry_by_ratio(view_base * this, uint32_t base_position);
 double view_base_recount_vertical_geometry_by_ratio(view_base * this, uint32_t base_position);
@@ -366,24 +391,28 @@ void multi_lang_finalize(multi_lang * this);
 
 view_bill_viewer_screen * view_bill_viewer_screen_new(view_base * view_base_ref);
 void view_bill_viewer_screen_build_widgets(view_bill_viewer_screen * this);
+void view_bill_viewer_screen_language(view_bill_viewer_screen * this);
 void view_bill_viewer_screen_pack_widgets(view_bill_viewer_screen * this);
 void view_bill_viewer_screen_signals(view_bill_viewer_screen * this);
 void view_bill_viewer_screen_finalize(view_bill_viewer_screen * this);
 
 view_order_screen * view_order_screen_new(view_base * view_base_ref);
 void view_order_screen_build_widgets(view_order_screen * this);
+void view_order_screen_language(view_order_screen * this);
 void view_order_screen_pack_widgets(view_order_screen * this);
 void view_order_screen_signals(view_order_screen * this);
 void view_order_screen_finalize(view_order_screen * this);
 
 view_manual_input_screen * view_manual_input_screen_new(view_base * view_base_ref);
 void view_manual_input_screen_build_widgets(view_manual_input_screen * this);
+void view_manual_input_screen_language(view_manual_input_screen * this);
 void view_manual_input_screen_pack_widgets(view_manual_input_screen * this);
 void view_manual_input_screen_signals(view_manual_input_screen * this);
 void view_manual_input_screen_finalize(view_manual_input_screen * this);
 
 view_settings_screen * view_settings_screen_new(view_base * view_base_ref);
 void view_settings_screen_build_widgets(view_settings_screen * this);
+void view_settings_screen_language(view_settings_screen * this);
 void view_settings_screen_pack_widgets(view_settings_screen * this);
 void view_settings_screen_signals(view_settings_screen * this);
 void view_settings_screen_finalize(view_settings_screen * this);
@@ -391,6 +420,7 @@ void view_settings_screen_finalize(view_settings_screen * this);
 view_order_finish_screen * view_order_finish_screen_new(view_base * view_base_ref);
 void view_order_finish_screen_build_widgets(view_order_finish_screen * this);
 void view_order_finish_screen_pack_widgets(view_order_finish_screen * this);
+void view_order_finish_screen_language(view_order_finish_screen * this);
 void view_order_finish_screen_signals(view_order_finish_screen * this);
 void view_order_finish_screen_finalize(view_order_finish_screen * this);
 
@@ -607,17 +637,27 @@ view_base * view_base_new(controler * controler_ref, uint32_t window_base_width,
 {
 	view_base * this = (view_base*) malloc(sizeof(view_base));
 
-	this->stack_container = gtk_stack_new();
-
 	this->controler_ref = controler_ref;
 	this->window_base_width = window_base_width;
 	this->window_base_height = window_base_height;
 
 	view_base_read_current_screen_geometry(this);
 
+	view_base_build_container(this);
+
 	this->multi_lang_ref = multi_lang_new();
 
 	return this;
+}
+
+void view_base_build_container(view_base * this)
+{
+	this->stack_container = gtk_stack_new();
+
+	gtk_widget_set_size_request(GTK_WIDGET(this->stack_container), 
+			this->window_width, 
+			view_base_recount_vertical_geometry_by_ratio(this, this->window_base_height-125));
+
 }
 
 void view_base_set_current_window_geometry(view_base * this, uint32_t window_width, uint32_t window_height)
@@ -663,6 +703,14 @@ void view_base_read_current_screen_geometry(view_base * this)
 	this->screen_height = geometry.height;
 
 	view_base_count_ratio(this);
+}
+
+void view_base_set_label_markup_text(GtkWidget * label, const char * string, int font_size)
+{
+	char label_text[128];
+
+	sprintf(label_text, "<span font_desc=\"%d\">%s</span>", font_size, string);
+	gtk_label_set_markup(GTK_LABEL(label), label_text);
 }
 
 void view_base_count_ratio(view_base * this)
@@ -786,6 +834,21 @@ void view_build_main_window(view * this)
 	gtk_container_add(GTK_CONTAINER(this->window), this->container);
 }
 
+GtkWidget * view_initialize_company_icon_widget(GdkPixbuf * icon, double window_width_ratio)
+{
+	GdkPixbuf * scale_icon = view_base_scale_icon(icon, x_axis, 150*window_width_ratio);
+
+	GtkWidget * company_icon = gtk_event_box_new();
+	gtk_container_add(GTK_CONTAINER(company_icon), gtk_image_new_from_pixbuf(scale_icon));
+
+	gtk_widget_set_size_request(GTK_WIDGET(company_icon), 
+					gdk_pixbuf_get_width(scale_icon), 
+					gdk_pixbuf_get_height(scale_icon));
+
+	gtk_widget_add_events(company_icon, GDK_BUTTON_PRESS_MASK);
+
+	return company_icon;
+}
 
 bool view_load_company_icon(view * this)
 {
@@ -793,17 +856,9 @@ bool view_load_company_icon(view * this)
 
 	if(icon != NULL)
 	{
-		icon = view_base_scale_icon(icon, x_axis, 200*this->view_base_ref->window_height_ratio);
+		this->company_icon = view_initialize_company_icon_widget(icon, this->view_base_ref->window_width_ratio);
+		g_object_unref(icon);
 
-		this->company_icon = gtk_event_box_new();
-		gtk_container_add(GTK_CONTAINER(this->company_icon), gtk_image_new_from_pixbuf(icon));
-
-		gtk_widget_set_size_request(GTK_WIDGET(this->company_icon), 
-						gdk_pixbuf_get_width(icon), 
-						gdk_pixbuf_get_height(icon));
-
-		gtk_widget_add_events(this->company_icon, GDK_BUTTON_PRESS_MASK);
-	
 		return true;
 	}
 	else
@@ -841,13 +896,10 @@ void view_build_alarm_widget(view * this)
 
 void view_pack_screens(view * this)
 {
+	/*
 	gtk_stack_add_named(GTK_STACK(this->view_base_ref->stack_container), 
 				this->view_bill_viewer_screen_ref->base_screen_ref->container, 
 				"bill_viewer_screen");
-
-	gtk_stack_add_named(GTK_STACK(this->view_base_ref->stack_container),
-				this->view_order_screen_ref->base_screen_ref->container,
-				"order_screen");
 
 	gtk_stack_add_named(GTK_STACK(this->view_base_ref->stack_container),
 				this->view_manual_input_screen_ref->base_screen_ref->container,
@@ -860,6 +912,11 @@ void view_pack_screens(view * this)
 	gtk_stack_add_named(GTK_STACK(this->view_base_ref->stack_container),
 				this->view_order_finish_screen_ref->base_screen_ref->container,
 				"order_finish_screen");
+*/
+	gtk_stack_add_named(GTK_STACK(this->view_base_ref->stack_container),
+				this->view_order_screen_ref->base_screen_ref->container,
+				"order_screen");
+
 }
 
 void view_pack_container(view * this)
@@ -869,18 +926,18 @@ void view_pack_container(view * this)
 		gtk_fixed_put(GTK_FIXED(this->container), 
 				this->company_icon, 
 				view_base_recount_horizontal_geometry_by_ratio(this->view_base_ref, (this->view_base_ref->window_base_width-200)/2+25),
-				view_base_recount_vertical_geometry_by_ratio(this->view_base_ref, 50));	
+				view_base_recount_vertical_geometry_by_ratio(this->view_base_ref, 30));	
 	}
 
 	gtk_fixed_put(GTK_FIXED(this->container), 
 			this->alarm_widget_ref->draw_area,
 			0,
-			view_base_recount_vertical_geometry_by_ratio(this->view_base_ref, 130));
+			view_base_recount_vertical_geometry_by_ratio(this->view_base_ref, 100));
 
 	gtk_fixed_put(GTK_FIXED(this->container),
 			this->view_base_ref->stack_container,
 			0,
-			view_base_recount_vertical_geometry_by_ratio(this->view_base_ref, 180));
+			view_base_recount_vertical_geometry_by_ratio(this->view_base_ref, 125));
 }  
 
 void view_signals(view * this)
@@ -979,6 +1036,8 @@ void multi_lang_initialize_czech_text(multi_lang * this)
 {
 	lang * lang_struct_cz = this->lang_struct[lang_cz];
 
+	lang_struct_cz->language_name = "Čeština";
+
 	multi_lang_set_alarm_text_czech(lang_struct_cz);
 	multi_lang_set_order_screen_text_czech(lang_struct_cz);
 	multi_lang_set_manual_input_screen_text_czech(lang_struct_cz);
@@ -995,7 +1054,17 @@ void multi_lang_set_alarm_text_czech(lang * this)
 
 void multi_lang_set_order_screen_text_czech(lang * this)
 {
-
+	this->btn_clear_order_text = "Nová platba";
+	this->btn_increase_quantity_text = "+1";
+	this->btn_decrease_quantity_text = "-1";
+	this->btn_pay_text = "Zaplatit";
+	this->btn_manual_input_text = "Zadat ručně";
+	this->lbl_sum_text = "Celkem:";
+	this->currency_text = "Kč";
+	this->order_list_widget_goods_text = "Zboží";
+	this->order_list_widget_quantity_text = "Množství";
+	this->order_list_widget_price_without_tax_text = "Cena bez DPH";
+	this->order_list_widget_price_with_tax_text = "Cena s DPH";
 }
 
 void multi_lang_set_manual_input_screen_text_czech(lang * this)
@@ -1051,12 +1120,18 @@ view_bill_viewer_screen * view_bill_viewer_screen_new(view_base * view_base_ref)
 	this->base_screen_ref = view_base_screen_new(view_base_ref);
 
 	view_bill_viewer_screen_build_widgets(this);
+	view_bill_viewer_screen_language(this);
 	view_bill_viewer_screen_pack_widgets(this);
 
 	return this;
 }
 
 void view_bill_viewer_screen_build_widgets(view_bill_viewer_screen * this)
+{
+
+}
+
+void view_bill_viewer_screen_language(view_bill_viewer_screen * this)
 {
 
 }
@@ -1087,6 +1162,7 @@ view_order_screen * view_order_screen_new(view_base * view_base_ref)
 	this->base_screen_ref = view_base_screen_new(view_base_ref);
 
 	view_order_screen_build_widgets(this);
+	view_order_screen_language(this);
 	view_order_screen_pack_widgets(this);
 
 	return this;
@@ -1094,12 +1170,34 @@ view_order_screen * view_order_screen_new(view_base * view_base_ref)
 
 void view_order_screen_build_widgets(view_order_screen * this)
 {
+	this->list = gtk_tree_view_new();
 
+	this->btn_clear_order = gtk_button_new_with_label("");
+	gtk_widget_set_size_request(GTK_WIDGET(this->btn_clear_order), 100,100);
+
+	this->btn_increase_quantity = gtk_button_new();
+
+	this->btn_decrease_quantity = gtk_button_new();
+	this->btn_pay = gtk_button_new();
+	this->btn_manual_input = gtk_button_new();
+
+	this->lbl_sum_text = gtk_label_new(NULL);
+	this->lbl_sum_price = gtk_label_new(NULL);
+}
+
+void view_order_screen_language(view_order_screen * this)
+{
+	lang * cz_lang = multi_lang_get_current_language(this->base_screen_ref->view_base_ref->multi_lang_ref);
+
+
+	GtkWidget * btn_label = gtk_bin_get_child(GTK_BIN(this->btn_clear_order));
+
+	view_base_set_label_markup_text(btn_label, cz_lang->btn_clear_order_text, 20);
 }
 
 void view_order_screen_pack_widgets(view_order_screen * this)
 {
-
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), this->btn_clear_order, 100, 100);
 }
 
 void view_order_screen_signals(view_order_screen * this)
@@ -1123,12 +1221,18 @@ view_manual_input_screen * view_manual_input_screen_new(view_base * view_base_re
 	this->base_screen_ref = view_base_screen_new(view_base_ref);
 
 	view_manual_input_screen_build_widgets(this);
+	view_manual_input_screen_language(this);
 	view_manual_input_screen_pack_widgets(this);
 
 	return this;
 }
 
 void view_manual_input_screen_build_widgets(view_manual_input_screen * this)
+{
+
+}
+
+void view_manual_input_screen_language(view_manual_input_screen * this)
 {
 
 }
@@ -1160,12 +1264,18 @@ view_settings_screen * view_settings_screen_new(view_base * view_base_ref)
 	this->base_screen_ref = view_base_screen_new(view_base_ref);
 
 	view_settings_screen_build_widgets(this);
+	view_settings_screen_language(this);
 	view_settings_screen_pack_widgets(this);
 
 	return this;
 }
 
 void view_settings_screen_build_widgets(view_settings_screen * this)
+{
+
+}
+
+void view_settings_screen_language(view_settings_screen * this)
 {
 
 }
@@ -1189,18 +1299,24 @@ void view_settings_screen_finalize(view_settings_screen * this)
 
 view_order_finish_screen * view_order_finish_screen_new(view_base * view_base_ref)
 {
-
 	view_order_finish_screen * this = (view_order_finish_screen *) malloc(sizeof(view_order_finish_screen));
 
 	this->base_screen_ref = view_base_screen_new(view_base_ref);
 
 	view_order_finish_screen_build_widgets(this);
+	view_order_finish_screen_language(this);
 	view_order_finish_screen_pack_widgets(this);
 
 	return this;
 }
 
 void view_order_finish_screen_build_widgets(view_order_finish_screen * this)
+{
+
+}
+
+
+void view_order_finish_screen_language(view_order_finish_screen * this)
 {
 
 }
