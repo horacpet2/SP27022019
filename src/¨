@@ -33,16 +33,6 @@ enum _lang_index_description_
 	lang_num	
 };
 
-enum _order_list_columns_
-{
-	GOODS_COLUMN = 0,
-	QUANTITY_COLUMN,
-	PRICE_WITHOUT_TAX_COLUMN,
-	PRICE_WITH_TAX_COLUMN,
-
-	N_COLUMNS
-};
-
 /******************** deklarace struktur *******************************/
 
 struct _controler_;
@@ -269,9 +259,8 @@ struct _view_bill_viewer_screen_
 struct _view_order_screen_
 {
 	view_base_screen * base_screen_ref;
-
+	
 	GtkWidget * list;
-	GtkWidget * scroll;
 
 	GtkWidget * btn_clear_order;
 	GtkWidget * btn_increase_quantity;
@@ -411,8 +400,6 @@ void view_bill_viewer_screen_finalize(view_bill_viewer_screen * this);
 
 view_order_screen * view_order_screen_new(view_base * view_base_ref);
 void view_order_screen_build_widgets(view_order_screen * this);
-GtkTreeViewColumn * view_order_screen_add_header_column(uint32_t position, const char * title);
-void view_order_screen_build_list_widget(view_order_screen * this);
 void view_order_screen_language(view_order_screen * this);
 void view_order_screen_pack_widgets(view_order_screen * this);
 void view_order_screen_signals(view_order_screen * this);
@@ -1018,7 +1005,6 @@ view_base_screen * view_base_screen_new(view_base * view_base_ref)
 GtkWidget * view_base_screen_build_button(double width, double height)
 {
 	GtkWidget * button = gtk_button_new_with_label("");
-	gtk_widget_set_can_focus (GTK_WIDGET(button), FALSE);
 	gtk_widget_set_size_request(GTK_WIDGET(button), width, height);
 
 	return button;
@@ -1189,78 +1175,22 @@ view_order_screen * view_order_screen_new(view_base * view_base_ref)
 	return this;
 }
 
-GtkWidget * view_base_screen_build_label(double width, double height, float xalign)
-{
-	GtkWidget * label = gtk_label_new(NULL);
-	
-	gtk_widget_set_size_request(GTK_WIDGET(label), width, height);
-	gtk_label_set_xalign(GTK_LABEL(label), xalign);
-
-	return label;
-}
-
-GtkTreeViewColumn * view_order_screen_add_header_column(uint32_t position, const char * title)
-{
-	GtkCellRenderer * renderer = gtk_cell_renderer_text_new();
-	g_object_set(renderer, "size", 20, NULL);
-
-	GtkTreeViewColumn * column = gtk_tree_view_column_new_with_attributes(title, renderer, NULL);
-
-
-	gboolean size_set;
-	int size;
-
-	g_object_get(renderer, "size", &size, "size-set", &size_set, NULL);
-	printf("%d - %s\n", size, ((size_set == TRUE) ? "true": "false"));
-
-	gtk_tree_view_column_set_resizable(GTK_TREE_VIEW_COLUMN(column), FALSE);
-	gtk_tree_view_column_set_min_width (column, 20);
-	gtk_tree_view_column_set_expand (column, TRUE);
-
-	return column;
-}
-
-void view_order_screen_build_list_widget(view_order_screen * this)
-{
-	GtkTreeStore * store = gtk_tree_store_new(N_COLUMNS,
-						G_TYPE_STRING,
-						G_TYPE_INT,
-						G_TYPE_DOUBLE,
-						G_TYPE_DOUBLE);
-
-	this->list = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
-	gtk_widget_set_can_focus (GTK_WIDGET(this->list), FALSE);
-	g_object_unref (G_OBJECT (store));
-
-	this->scroll = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(this->scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-	gtk_container_add(GTK_CONTAINER(this->scroll), this->list);
-	gtk_widget_set_can_focus (GTK_WIDGET(this->scroll), FALSE);
-	gtk_widget_set_size_request(GTK_WIDGET(this->scroll), 
-			view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, this->base_screen_ref->view_base_ref->window_base_width-100),
-			view_base_recount_vertical_geometry_by_ratio(this->base_screen_ref->view_base_ref, this->base_screen_ref->view_base_ref->window_base_height-125-160));
-
-}
-
 void view_order_screen_build_widgets(view_order_screen * this)
 {
-	double widget_height = view_base_recount_vertical_geometry_by_ratio(this->base_screen_ref->view_base_ref, 50);
+	this->list = gtk_tree_view_new();
+
+	double button_height = view_base_recount_vertical_geometry_by_ratio(this->base_screen_ref->view_base_ref, 50);
 	double button_width_short = view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, 50);
 	double button_width_long = view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, 100);
 
-	view_order_screen_build_list_widget(this);
+	this->btn_clear_order = view_base_screen_build_button(button_width_long, button_height);
+	this->btn_increase_quantity = view_base_screen_build_button(button_width_short, button_height);
+	this->btn_decrease_quantity = view_base_screen_build_button(button_width_short, button_height);
+	this->btn_pay = view_base_screen_build_button(button_width_long, button_height);
+	this->btn_manual_input = view_base_screen_build_button(button_width_long, button_height);
 
-	this->btn_clear_order = view_base_screen_build_button(button_width_long, widget_height);
-	this->btn_increase_quantity = view_base_screen_build_button(button_width_short, widget_height);
-	this->btn_decrease_quantity = view_base_screen_build_button(button_width_short, widget_height);
-	this->btn_pay = view_base_screen_build_button(button_width_long, widget_height);
-	this->btn_manual_input = view_base_screen_build_button(button_width_long, widget_height);
-
-	this->lbl_sum = view_base_screen_build_label(view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, 100),
-			widget_height, 0);
-
-	this->lbl_sum_price = view_base_screen_build_label(view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, 200),
-			widget_height, 1);
+	this->lbl_sum = gtk_label_new(NULL);
+	this->lbl_sum_price = gtk_label_new(NULL);
 }
 
 void view_order_screen_language(view_order_screen * this)
@@ -1284,17 +1214,12 @@ void view_order_screen_language(view_order_screen * this)
 	view_base_screen_set_label_markup_text(btn_label, cz_lang->btn_manual_input_text, 20);
 
 	view_base_screen_set_label_markup_text(this->lbl_sum, cz_lang->lbl_sum_text, 20);
+
 	view_base_screen_set_label_markup_text(this->lbl_sum_price, cz_lang->default_sum_price_text, 20);
-
-
-	gtk_tree_view_append_column(GTK_TREE_VIEW(this->list), 
-				view_order_screen_add_header_column(GOODS_COLUMN, cz_lang->order_list_widget_goods_text));
-	gtk_tree_view_append_column(GTK_TREE_VIEW(this->list), 
-				view_order_screen_add_header_column(QUANTITY_COLUMN, cz_lang->order_list_widget_quantity_text));
-	gtk_tree_view_append_column(GTK_TREE_VIEW(this->list), 
-				view_order_screen_add_header_column(PRICE_WITHOUT_TAX_COLUMN, cz_lang->order_list_widget_price_without_tax_text));
-	gtk_tree_view_append_column(GTK_TREE_VIEW(this->list), 
-				view_order_screen_add_header_column(PRICE_WITH_TAX_COLUMN, cz_lang->order_list_widget_price_with_tax_text));
+	gtk_widget_set_size_request(GTK_WIDGET(this->lbl_sum_price), 
+			view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, 200),
+			view_base_recount_vertical_geometry_by_ratio(this->base_screen_ref->view_base_ref, 50));
+	gtk_label_set_halign(GTK_LABEL(this->lbl_sum_price), GTK_ALIGN_END);
 }
 
 void view_order_screen_pack_widgets(view_order_screen * this)
@@ -1330,10 +1255,6 @@ void view_order_screen_pack_widgets(view_order_screen * this)
 	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), this->lbl_sum_price, 
 			view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, this->base_screen_ref->view_base_ref->window_base_width-250),
 			labels_line_position);
-
-	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), this->scroll,
-			view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, 50),
-			view_base_recount_vertical_geometry_by_ratio(this->base_screen_ref->view_base_ref, 80));
 }
 
 void view_order_screen_signals(view_order_screen * this)
