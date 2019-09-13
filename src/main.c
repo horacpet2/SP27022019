@@ -116,8 +116,18 @@ typedef struct _alarm_widget_ alarm_widget;
 
 
 
+struct _geometry_;
+typedef struct _geometry_ geometry;
+
+
 /****************** definice struktur *********************************/
 
+
+struct _geometry_
+{
+	uint32_t width;
+	uint32_t height;
+};
 
 
 struct _controler_
@@ -215,14 +225,9 @@ struct _view_base_
 
 	multi_lang * multi_lang_ref;
 
-	uint32_t window_base_width;
-	uint32_t window_base_height;
-
-	uint32_t window_width;
-	uint32_t window_height;
-
-	uint32_t screen_width;
-	uint32_t screen_height;
+	geometry window_base_geometry;
+	geometry window_geometry;
+	geometry screen_geometry;
 
 	double window_width_ratio;
 	double window_height_ratio;
@@ -247,18 +252,31 @@ struct _lang_
 {
 	const char * language_name;
 
+	const char * default_sum_price_text;
+	const char * currency_text;
+	const char * btn_back_text;
+
+
 	const char * btn_clear_order_text;
 	const char * btn_increase_quantity_text;
 	const char * btn_decrease_quantity_text;
 	const char * btn_pay_text;
 	const char * btn_manual_input_text;
 	const char * lbl_sum_text;
-	const char * currency_text;
-	const char * default_sum_price_text;
 	const char * order_list_widget_goods_text;
 	const char * order_list_widget_quantity_text;
 	const char * order_list_widget_price_without_tax_text;
 	const char * order_list_widget_price_with_tax_text;
+
+	const char * btn_prev_text;
+	const char * btn_next_text;
+
+	const char * btn_print_bill_text;
+	const char * btn_finish_text;
+
+	const char * lbl_customer_payed_text;
+	const char * lbl_order_sum_text;
+	const char * lbl_money_back_text;
 };
 
 struct _view_bill_viewer_screen_
@@ -279,14 +297,18 @@ struct _view_order_screen_
 	GtkWidget * btn_pay;
 	GtkWidget * btn_manual_input;
 
-	GtkWidget * lbl_sum;
+	GtkWidget * lbl_order_sum;
 	GtkWidget * lbl_sum_price;
 };
 
 struct _view_manual_input_screen_
 {
 	view_base_screen * base_screen_ref;
+	GtkWidget *** button_matrix;
 
+	GtkWidget * btn_next;
+	GtkWidget * btn_prev;
+	GtkWidget * btn_back;
 };
 
 struct _view_settings_screen_
@@ -298,7 +320,19 @@ struct _view_settings_screen_
 struct _view_order_finish_screen_
 {
 	view_base_screen * base_screen_ref;
+	
+	GtkWidget *** button_matrix;
 
+	GtkWidget * btn_print_bill;
+	GtkWidget * btn_back;
+	GtkWidget * btn_finish;
+
+	GtkWidget * lbl_order_sum;
+	GtkWidget * lbl_customer_payed;
+	GtkWidget * lbl_money_back;
+	GtkWidget * lbl_order_sum_price;
+	GtkWidget * entry_customer_payed;
+	GtkWidget * lbl_count_money_back;
 };
 
 struct _alarm_widget_
@@ -307,8 +341,7 @@ struct _alarm_widget_
 
 	alarm_buffer * alarm_buffer_ref;
 
-	uint32_t width;
-	uint32_t height;
+	geometry widget_geometry;
 
 	bool blink;
 };
@@ -369,9 +402,9 @@ void view_finalize(view * this);
 void view_window_exit_callback(GtkWidget * widget, gpointer param);
 void view_close_callback(GtkWidget * widget, GdkEventButton * event, gpointer * param);
 
-view_base * view_base_new(controler * controler_ref, uint32_t window_base_width, uint32_t window_base_height);
+view_base * view_base_new(controler * controler_ref, geometry window_base_geomtry);
 void view_base_build_container(view_base * this);
-void view_base_set_current_window_geometry(view_base * this, uint32_t window_width, uint32_t window_height);
+void view_base_set_current_window_geometry(view_base * this, geometry window_geometry);
 void view_base_read_current_screen_geometry(view_base * this);
 void view_base_show_order_screen(view_base * this);
 void view_base_show_settings_screen(view_base * this);
@@ -379,14 +412,15 @@ void view_base_show_order_finish_screen(view_base * this);
 void view_base_show_bill_viewer_screen(view_base * this);
 void view_base_show_manual_input_screen(view_base * this);
 void view_base_count_ratio(view_base * this);
-double view_base_recount_horizontal_geometry_by_ratio(view_base * this, uint32_t base_position);
-double view_base_recount_vertical_geometry_by_ratio(view_base * this, uint32_t base_position);
+double view_base_recount_x_geometry_by_ratio(view_base * this, uint32_t base_position);
+double view_base_recount_y_geometry_by_ratio(view_base * this, uint32_t base_position);
 GdkPixbuf * view_base_load_image(char * image_address);
 GdkPixbuf * view_base_scale_icon(GdkPixbuf * icon, enum _side_orientation_ axis, double new_size);
 void view_base_finalize(view_base * this);
 
 view_base_screen * view_base_screen_new(view_base * view_base_ref);
-GtkWidget * view_base_screen_build_button(double width, double height);
+GtkWidget * view_base_screen_build_button(view_base_screen * this, double width, double height);
+GtkWidget * view_base_screen_build_label(view_base_screen * this, double width, double height, float xalign);
 void view_base_screen_set_label_markup_text(GtkWidget * label, const char * string, int font_size);
 void view_base_screen_finalize(view_base_screen * this);
 
@@ -416,6 +450,11 @@ void view_order_screen_build_list_widget(view_order_screen * this);
 void view_order_screen_language(view_order_screen * this);
 void view_order_screen_pack_widgets(view_order_screen * this);
 void view_order_screen_signals(view_order_screen * this);
+void view_order_screen_btn_manual_input_click_callback(GtkWidget * widget, gpointer param);
+void view_order_screen_btn_increase_quantity_click_callback(GtkWidget * widget, gpointer param);
+void view_order_screen_btn_decrease_quantity_click_callback(GtkWidget * widget, gpointer param);
+void view_order_screen_btn_pay_click_callback(GtkWidget * widget, gpointer param);
+void view_order_screen_btn_clear_order_click_callback(GtkWidget * widget, gpointer param);
 void view_order_screen_finalize(view_order_screen * this);
 
 view_manual_input_screen * view_manual_input_screen_new(view_base * view_base_ref);
@@ -423,6 +462,24 @@ void view_manual_input_screen_build_widgets(view_manual_input_screen * this);
 void view_manual_input_screen_language(view_manual_input_screen * this);
 void view_manual_input_screen_pack_widgets(view_manual_input_screen * this);
 void view_manual_input_screen_signals(view_manual_input_screen * this);
+void view_manual_input_screen_btn_prev_click_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_btn_back_click_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_btn_next_click_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_0x0_clicked_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_0x1_clicked_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_0x2_clicked_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_0x3_clicked_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_0x4_clicked_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_1x0_clicked_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_1x1_clicked_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_1x2_clicked_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_1x3_clicked_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_1x4_clicked_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_2x0_clicked_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_2x1_clicked_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_2x2_clicked_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_2x3_clicked_callback(GtkWidget * widget, gpointer param);
+void view_manual_input_screen_button_metrix_2x4_clicked_callback(GtkWidget * widget, gpointer param);
 void view_manual_input_screen_finalize(view_manual_input_screen * this);
 
 view_settings_screen * view_settings_screen_new(view_base * view_base_ref);
@@ -437,9 +494,24 @@ void view_order_finish_screen_build_widgets(view_order_finish_screen * this);
 void view_order_finish_screen_pack_widgets(view_order_finish_screen * this);
 void view_order_finish_screen_language(view_order_finish_screen * this);
 void view_order_finish_screen_signals(view_order_finish_screen * this);
+void view_order_finish_screen_btn_print_bill_click_callback(GtkWidget * widget, gpointer param);
+void view_order_finish_screen_btn_back_click_callback(GtkWidget * widget, gpointer param);
+void view_order_finish_screen_btn_finish_click_callback(GtkWidget * widget, gpointer param);
+void view_order_finish_screen_button_matrix_0x0_click_callback(GtkWidget * widget, gpointer param);
+void view_order_finish_screen_button_matrix_0x1_click_callback(GtkWidget * widget, gpointer param);
+void view_order_finish_screen_button_matrix_0x2_click_callback(GtkWidget * widget, gpointer param);
+void view_order_finish_screen_button_matrix_1x0_click_callback(GtkWidget * widget, gpointer param);
+void view_order_finish_screen_button_matrix_1x1_click_callback(GtkWidget * widget, gpointer param);
+void view_order_finish_screen_button_matrix_1x2_click_callback(GtkWidget * widget, gpointer param);
+void view_order_finish_screen_button_matrix_2x0_click_callback(GtkWidget * widget, gpointer param);
+void view_order_finish_screen_button_matrix_2x1_click_callback(GtkWidget * widget, gpointer param);
+void view_order_finish_screen_button_matrix_2x2_click_callback(GtkWidget * widget, gpointer param);
+void view_order_finish_screen_button_matrix_3x0_click_callback(GtkWidget * widget, gpointer param);
+void view_order_finish_screen_button_matrix_3x1_click_callback(GtkWidget * widget, gpointer param);
+void view_order_finish_screen_button_matrix_3x2_click_callback(GtkWidget * widget, gpointer param);
 void view_order_finish_screen_finalize(view_order_finish_screen * this);
 
-alarm_widget * alarm_widget_new(alarm_buffer * alarm_buffer_ref, uint32_t width, uint32_t height);
+alarm_widget * alarm_widget_new(alarm_buffer * alarm_buffer_ref, geometry widget_geometry);
 gboolean alarm_widget_draw_callback(GtkWidget * drawing_area, cairo_t * cr, gpointer param);
 void alarm_widget_reset_error_buffer_callback(GtkWidget * widget, GdkEventButton * event, gpointer param);
 void alarm_widget_build(alarm_widget * this);
@@ -648,13 +720,14 @@ void order_item_finalize(order_item * this)
 
 /************************** modul base_view ******************************/
 
-view_base * view_base_new(controler * controler_ref, uint32_t window_base_width, uint32_t window_base_height)
+view_base * view_base_new(controler * controler_ref, geometry window_base_geometry)
 {
 	view_base * this = (view_base*) malloc(sizeof(view_base));
 
 	this->controler_ref = controler_ref;
-	this->window_base_width = window_base_width;
-	this->window_base_height = window_base_height;
+
+	this->window_base_geometry.width = window_base_geometry.width;
+	this->window_base_geometry.height = window_base_geometry.height;
 
 	view_base_read_current_screen_geometry(this);
 
@@ -670,14 +743,14 @@ void view_base_build_container(view_base * this)
 	this->stack_container = gtk_stack_new();
 
 	gtk_widget_set_size_request(GTK_WIDGET(this->stack_container), 
-			this->screen_width, 
-			view_base_recount_vertical_geometry_by_ratio(this, this->window_base_height-125));
+			this->screen_geometry.width, 
+			view_base_recount_y_geometry_by_ratio(this, this->window_base_geometry.height-125));
 }
 
-void view_base_set_current_window_geometry(view_base * this, uint32_t window_width, uint32_t window_height)
+void view_base_set_current_window_geometry(view_base * this, geometry window_geometry)
 {
-	this->window_width = window_width;
-	this->window_height = window_height;
+	this->window_geometry.width = window_geometry.width;
+	this->window_geometry.height = window_geometry.height;
 }
 
 void view_base_show_order_screen(view_base * this)
@@ -707,14 +780,14 @@ void view_base_show_manual_input_screen(view_base * this)
 
 void view_base_read_current_screen_geometry(view_base * this)
 {
-	GdkRectangle geometry;
+	GdkRectangle system_geometry;
 
 	GdkDisplay* display = gdk_display_get_default();
         GdkMonitor* monitor = gdk_display_get_monitor(display, 0);
-        gdk_monitor_get_workarea(monitor, &geometry);
+        gdk_monitor_get_workarea(monitor, &system_geometry);
 
-	this->screen_width = geometry.width;
-	this->screen_height = geometry.height;
+	this->screen_geometry.width = system_geometry.width;
+	this->screen_geometry.height = system_geometry.height;
 
 	view_base_count_ratio(this);
 }
@@ -729,16 +802,16 @@ void view_base_screen_set_label_markup_text(GtkWidget * label, const char * stri
 
 void view_base_count_ratio(view_base * this)
 {
-	this->window_width_ratio = ((double) this->screen_width) / ((double) this->window_base_width);
-	this->window_height_ratio = ((double) this->screen_height) / ((double) this->window_base_height);
+	this->window_width_ratio = ((double) this->screen_geometry.width) / ((double) this->window_base_geometry.width);
+	this->window_height_ratio = ((double) this->screen_geometry.height) / ((double) this->window_base_geometry.height);
 }
 
-double view_base_recount_horizontal_geometry_by_ratio(view_base * this, uint32_t base_position)
+double view_base_recount_x_geometry_by_ratio(view_base * this, uint32_t base_position)
 {
 	return (this->window_width_ratio * ((double) base_position));
 }
 
-double view_base_recount_vertical_geometry_by_ratio(view_base * this, uint32_t base_position)
+double view_base_recount_y_geometry_by_ratio(view_base * this, uint32_t base_position)
 {
 	return (this->window_height_ratio * ((double) base_position));
 }
@@ -759,12 +832,14 @@ GdkPixbuf * view_base_scale_icon(GdkPixbuf * icon, enum _side_orientation_ axis,
 	{
 		if(axis == y_axis)
 		{
-			double scale = (((double) new_size)/((double)gdk_pixbuf_get_height(icon))) * ((double)gdk_pixbuf_get_width(icon));
+			double ratio = ((double) new_size)/((double)gdk_pixbuf_get_height(icon));
+			double scale = (ratio * ((double)gdk_pixbuf_get_width(icon)));
 			scaled_icon = gdk_pixbuf_scale_simple (icon, (int) scale, new_size, GDK_INTERP_HYPER);
 		}
 		else
 		{
-			double scale = (((double) new_size)/((double)gdk_pixbuf_get_width(icon))) * ((double)gdk_pixbuf_get_height(icon));
+			double ratio = ((double) new_size)/((double)gdk_pixbuf_get_width(icon));
+			double scale = (ratio * ((double)gdk_pixbuf_get_height(icon)));
 			scaled_icon = gdk_pixbuf_scale_simple (icon, (int) new_size, scale, GDK_INTERP_HYPER);
 		}
 	}
@@ -836,8 +911,8 @@ void view_build_main_window(view * this)
 	this->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
 	gtk_window_set_default_size(GTK_WINDOW(this->window), 
-					this->view_base_ref->screen_width, 
-					this->view_base_ref->screen_height);
+					this->view_base_ref->screen_geometry.width, 
+					this->view_base_ref->screen_geometry.height);
 
 	gtk_window_set_title(GTK_WINDOW(this->window), CONF_WINDOW_TITLE);
 	gtk_window_set_position(GTK_WINDOW(this->window), GTK_WIN_POS_CENTER_ALWAYS);
@@ -885,10 +960,11 @@ bool view_load_company_icon(view * this)
 
 void view_initialize_base_class(view * this)
 {
-	this->view_base_ref = view_base_new(this->controler_ref, 800, 600);
+	geometry window_base_geometry = {800, 600};
+
+	this->view_base_ref = view_base_new(this->controler_ref, window_base_geometry);
 	view_base_set_current_window_geometry(this->view_base_ref, 
-						this->view_base_ref->screen_width, 
-						this->view_base_ref->screen_height);
+						this->view_base_ref->screen_geometry);
 }
 
 void view_build_screens(view * this)
@@ -902,9 +978,11 @@ void view_build_screens(view * this)
 
 void view_build_alarm_widget(view * this)
 {
-	this->alarm_widget_ref = alarm_widget_new(this->view_base_ref->controler_ref->alarm_buffer_ref, 
-					this->view_base_ref->window_width, 
-					view_base_recount_vertical_geometry_by_ratio(this->view_base_ref, 25));
+	geometry widget_geometry;
+	widget_geometry.width = this->view_base_ref->window_geometry.width;
+	widget_geometry.height = view_base_recount_y_geometry_by_ratio(this->view_base_ref, 25);
+
+	this->alarm_widget_ref = alarm_widget_new(this->view_base_ref->controler_ref->alarm_buffer_ref, widget_geometry);
 
 }
 
@@ -935,21 +1013,23 @@ void view_pack_container(view * this)
 {
 	if(this->company_icon != NULL)
 	{
+		uint32_t window_base_width = this->view_base_ref->window_base_geometry.width;
+
 		gtk_fixed_put(GTK_FIXED(this->container), 
 				this->company_icon, 
-				view_base_recount_horizontal_geometry_by_ratio(this->view_base_ref, (this->view_base_ref->window_base_width-200)/2+25),
-				view_base_recount_vertical_geometry_by_ratio(this->view_base_ref, 30));	
+				view_base_recount_x_geometry_by_ratio(this->view_base_ref, (window_base_width-200)/2+25),
+				view_base_recount_y_geometry_by_ratio(this->view_base_ref, 30));	
 	}
 
 	gtk_fixed_put(GTK_FIXED(this->container), 
 			this->alarm_widget_ref->draw_area,
 			0,
-			view_base_recount_vertical_geometry_by_ratio(this->view_base_ref, 100));
+			view_base_recount_y_geometry_by_ratio(this->view_base_ref, 100));
 
 	gtk_fixed_put(GTK_FIXED(this->container),
 			this->view_base_ref->stack_container,
 			0,
-			view_base_recount_vertical_geometry_by_ratio(this->view_base_ref, 125));
+			view_base_recount_y_geometry_by_ratio(this->view_base_ref, 125));
 }  
 
 void view_signals(view * this)
@@ -1015,14 +1095,30 @@ view_base_screen * view_base_screen_new(view_base * view_base_ref)
 	return this;
 }
 
-GtkWidget * view_base_screen_build_button(double width, double height)
+GtkWidget * view_base_screen_build_button(view_base_screen * this, double width, double height)
 {
 	GtkWidget * button = gtk_button_new_with_label("");
 	gtk_widget_set_can_focus (GTK_WIDGET(button), FALSE);
-	gtk_widget_set_size_request(GTK_WIDGET(button), width, height);
+
+	gtk_widget_set_size_request(GTK_WIDGET(button), 
+					view_base_recount_x_geometry_by_ratio(this->view_base_ref, width), 
+					view_base_recount_y_geometry_by_ratio(this->view_base_ref, height));
 
 	return button;
 }
+
+GtkWidget * view_base_screen_build_label(view_base_screen * this, double width, double height, float xalign)
+{
+	GtkWidget * label = gtk_label_new(NULL);
+	
+	gtk_widget_set_size_request(GTK_WIDGET(label), 
+					view_base_recount_x_geometry_by_ratio(this->view_base_ref, width),
+		       			view_base_recount_y_geometry_by_ratio(this->view_base_ref, height));
+	gtk_label_set_xalign(GTK_LABEL(label), xalign);
+
+	return label;
+}
+
 
 void view_base_screen_finalize(view_base_screen * this)
 {
@@ -1090,12 +1186,19 @@ void multi_lang_set_order_screen_text_czech(lang * this)
 
 void multi_lang_set_manual_input_screen_text_czech(lang * this)
 {
-
+	this->btn_prev_text = "Předchozí";
+	this->btn_back_text = "Zpět";
+	this->btn_next_text = "Další";
 }
 
 void multi_lang_set_order_finish_screen_text_czech(lang * this)
 {
+	this->btn_print_bill_text = "Vytisknout\núčtenku";
+	this->btn_finish_text = "Dokončit\nobjednávku";
 
+	this->lbl_customer_payed_text = "Zaplaceno:";
+	this->lbl_order_sum_text = "Celkem k zaplacení:";
+	this->lbl_money_back_text = "Na zpět:";
 }
 
 void multi_lang_set_settings_screen_text_czech(lang * this)
@@ -1189,16 +1292,6 @@ view_order_screen * view_order_screen_new(view_base * view_base_ref)
 	return this;
 }
 
-GtkWidget * view_base_screen_build_label(double width, double height, float xalign)
-{
-	GtkWidget * label = gtk_label_new(NULL);
-	
-	gtk_widget_set_size_request(GTK_WIDGET(label), width, height);
-	gtk_label_set_xalign(GTK_LABEL(label), xalign);
-
-	return label;
-}
-
 GtkTreeViewColumn * view_order_screen_add_header_column(uint32_t position, const char * title)
 {
 	GtkCellRenderer * renderer = gtk_cell_renderer_text_new();
@@ -1222,6 +1315,8 @@ GtkTreeViewColumn * view_order_screen_add_header_column(uint32_t position, const
 
 void view_order_screen_build_list_widget(view_order_screen * this)
 {
+	geometry window_base_geometry = this->base_screen_ref->view_base_ref->window_base_geometry;
+
 	GtkTreeStore * store = gtk_tree_store_new(N_COLUMNS,
 						G_TYPE_STRING,
 						G_TYPE_INT,
@@ -1237,30 +1332,34 @@ void view_order_screen_build_list_widget(view_order_screen * this)
 	gtk_container_add(GTK_CONTAINER(this->scroll), this->list);
 	gtk_widget_set_can_focus (GTK_WIDGET(this->scroll), FALSE);
 	gtk_widget_set_size_request(GTK_WIDGET(this->scroll), 
-			view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, this->base_screen_ref->view_base_ref->window_base_width-100),
-			view_base_recount_vertical_geometry_by_ratio(this->base_screen_ref->view_base_ref, this->base_screen_ref->view_base_ref->window_base_height-125-160));
+			view_base_recount_x_geometry_by_ratio(this->base_screen_ref->view_base_ref, window_base_geometry.width-100),
+			view_base_recount_y_geometry_by_ratio(this->base_screen_ref->view_base_ref, window_base_geometry.height-125-160));
 
 }
 
 void view_order_screen_build_widgets(view_order_screen * this)
 {
-	double widget_height = view_base_recount_vertical_geometry_by_ratio(this->base_screen_ref->view_base_ref, 50);
-	double button_width_short = view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, 50);
-	double button_width_long = view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, 100);
+	double widget_height = 50;
+	double button_width_short = 50;
+	double button_width_long = 100;
 
 	view_order_screen_build_list_widget(this);
 
-	this->btn_clear_order = view_base_screen_build_button(button_width_long, widget_height);
-	this->btn_increase_quantity = view_base_screen_build_button(button_width_short, widget_height);
-	this->btn_decrease_quantity = view_base_screen_build_button(button_width_short, widget_height);
-	this->btn_pay = view_base_screen_build_button(button_width_long, widget_height);
-	this->btn_manual_input = view_base_screen_build_button(button_width_long, widget_height);
+	this->btn_clear_order = view_base_screen_build_button(this->base_screen_ref, button_width_long, widget_height);
+	this->btn_increase_quantity = view_base_screen_build_button(this->base_screen_ref, button_width_short, widget_height);
+	this->btn_decrease_quantity = view_base_screen_build_button(this->base_screen_ref, button_width_short, widget_height);
+	this->btn_pay = view_base_screen_build_button(this->base_screen_ref, button_width_long, widget_height);
+	this->btn_manual_input = view_base_screen_build_button(this->base_screen_ref, button_width_long, widget_height);
 
-	this->lbl_sum = view_base_screen_build_label(view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, 100),
-			widget_height, 0);
+	this->lbl_order_sum = view_base_screen_build_label(this->base_screen_ref, 
+							100,
+							widget_height, 
+							0);
 
-	this->lbl_sum_price = view_base_screen_build_label(view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, 200),
-			widget_height, 1);
+	this->lbl_sum_price = view_base_screen_build_label(this->base_screen_ref,
+								200,
+								widget_height, 
+								1);
 }
 
 void view_order_screen_language(view_order_screen * this)
@@ -1283,7 +1382,7 @@ void view_order_screen_language(view_order_screen * this)
 	btn_label = gtk_bin_get_child(GTK_BIN(this->btn_manual_input));
 	view_base_screen_set_label_markup_text(btn_label, cz_lang->btn_manual_input_text, 20);
 
-	view_base_screen_set_label_markup_text(this->lbl_sum, cz_lang->lbl_sum_text, 20);
+	view_base_screen_set_label_markup_text(this->lbl_order_sum, cz_lang->lbl_sum_text, 20);
 	view_base_screen_set_label_markup_text(this->lbl_sum_price, cz_lang->default_sum_price_text, 20);
 
 
@@ -1299,44 +1398,104 @@ void view_order_screen_language(view_order_screen * this)
 
 void view_order_screen_pack_widgets(view_order_screen * this)
 {
-	double buttons_line_position = view_base_recount_vertical_geometry_by_ratio(this->base_screen_ref->view_base_ref, 
-							this->base_screen_ref->view_base_ref->window_base_height-125-50-20);
-	double labels_line_position = view_base_recount_vertical_geometry_by_ratio(this->base_screen_ref->view_base_ref, 20);
+	view_base * view_base_ref = this->base_screen_ref->view_base_ref;
+	geometry window_base_geometry = view_base_ref->window_base_geometry;
+	double buttons_line_position = view_base_recount_y_geometry_by_ratio(view_base_ref, 
+							window_base_geometry.height-125-50-20);
+	double labels_line_position = view_base_recount_y_geometry_by_ratio(view_base_ref, 20);
 
-	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), this->btn_manual_input, 
-			view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, (this->base_screen_ref->view_base_ref->window_base_width-100)/2), 
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->btn_manual_input, 
+			view_base_recount_x_geometry_by_ratio(view_base_ref, (window_base_geometry.width-100)/2), 
 			buttons_line_position);
 
-	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), this->btn_clear_order,
-			view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, 150),
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->btn_clear_order,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, 150),
 			buttons_line_position);
 
-	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), this->btn_pay,
-			view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, this->base_screen_ref->view_base_ref->window_base_width-250),
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->btn_pay,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, window_base_geometry.width-250),
 			buttons_line_position);
 
-	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), this->btn_increase_quantity,
-			view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, this->base_screen_ref->view_base_ref->window_base_width-100),
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->btn_increase_quantity,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, window_base_geometry.width-100),
 			buttons_line_position);
 
-	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), this->btn_decrease_quantity,
-			view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, 50),
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->btn_decrease_quantity,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
 			buttons_line_position);
 
-	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), this->lbl_sum, 
-			view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, 50),
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->lbl_order_sum, 
+			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
 			labels_line_position);
 
-	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), this->lbl_sum_price, 
-			view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, this->base_screen_ref->view_base_ref->window_base_width-250),
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->lbl_sum_price, 
+			view_base_recount_x_geometry_by_ratio(view_base_ref, window_base_geometry.width-250),
 			labels_line_position);
 
-	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), this->scroll,
-			view_base_recount_horizontal_geometry_by_ratio(this->base_screen_ref->view_base_ref, 50),
-			view_base_recount_vertical_geometry_by_ratio(this->base_screen_ref->view_base_ref, 80));
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->scroll,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
+			view_base_recount_y_geometry_by_ratio(view_base_ref, 80));
 }
 
 void view_order_screen_signals(view_order_screen * this)
+{
+	g_signal_connect(G_OBJECT(this->btn_manual_input), 
+			"clicked", 
+			G_CALLBACK(view_order_screen_btn_manual_input_click_callback), 
+			this->base_screen_ref->view_base_ref);
+
+	g_signal_connect(G_OBJECT(this->btn_pay), 
+			"clicked",
+			G_CALLBACK(view_order_screen_btn_pay_click_callback), 
+			this->base_screen_ref->view_base_ref);
+
+	g_signal_connect(G_OBJECT(this->btn_increase_quantity), 
+			"clicked",
+			G_CALLBACK(view_order_screen_btn_increase_quantity_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->btn_decrease_quantity),
+			"clicked",
+			G_CALLBACK(view_order_screen_btn_decrease_quantity_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->btn_clear_order), 
+			"clicked",
+			G_CALLBACK(view_order_screen_btn_clear_order_click_callback),
+			this);
+
+}
+
+void view_order_screen_btn_manual_input_click_callback(GtkWidget * widget, gpointer param)
+{
+	view_base_show_manual_input_screen((view_base*) param);
+}
+
+
+void view_order_screen_btn_increase_quantity_click_callback(GtkWidget * widget, gpointer param)
+{
+	
+}
+
+void view_order_screen_btn_decrease_quantity_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_order_screen_btn_pay_click_callback(GtkWidget * widget, gpointer param)
+{
+	view_base_show_order_finish_screen((view_base*) param);
+}
+
+void view_order_screen_btn_clear_order_click_callback(GtkWidget * widget, gpointer param)
 {
 
 }
@@ -1365,20 +1524,263 @@ view_manual_input_screen * view_manual_input_screen_new(view_base * view_base_re
 
 void view_manual_input_screen_build_widgets(view_manual_input_screen * this)
 {
+	double btn_width = 150;
+	double btn_height = 50;
 
+	this->button_matrix = (GtkWidget ***) malloc(sizeof(GtkWidget **)*3);
+
+	for(int i = 0; i<3; i++)
+	{
+		this->button_matrix[i] = (GtkWidget **) malloc(sizeof(GtkWidget*)*5);
+
+		for(int j = 0; j < 5; j++)
+		{
+			this->button_matrix[i][j] = view_base_screen_build_button(this->base_screen_ref, 150, 50);
+			gtk_widget_set_sensitive(GTK_WIDGET(this->button_matrix[i][j]), FALSE);
+		}
+	}
+
+	this->btn_next = view_base_screen_build_button(this->base_screen_ref, btn_width, btn_height);
+	this->btn_prev = view_base_screen_build_button(this->base_screen_ref, btn_width, btn_height);
+	this->btn_back = view_base_screen_build_button(this->base_screen_ref, btn_width, btn_height);
 }
 
 void view_manual_input_screen_language(view_manual_input_screen * this)
 {
+	lang * cz_lang = multi_lang_get_current_language(this->base_screen_ref->view_base_ref->multi_lang_ref);
+	GtkWidget * button_label;
+	
+	button_label = gtk_bin_get_child(GTK_BIN(this->btn_prev));
+	view_base_screen_set_label_markup_text(button_label, cz_lang->btn_prev_text, 20);
 
+	button_label = gtk_bin_get_child(GTK_BIN(this->btn_back));
+	view_base_screen_set_label_markup_text(button_label, cz_lang->btn_back_text, 20);
+
+	button_label = gtk_bin_get_child(GTK_BIN(this->btn_next));
+	view_base_screen_set_label_markup_text(button_label, cz_lang->btn_next_text, 20);
 }
 
 void view_manual_input_screen_pack_widgets(view_manual_input_screen * this)
 {
+	view_base * view_base_ref = this->base_screen_ref->view_base_ref;
+	geometry base_window_geometry = view_base_ref->window_base_geometry;
+
+	for(int i = 0; i < 3; i++)
+	{
+		for(int j = 0; j < 5; j++)
+		{
+			double x_position = view_base_recount_x_geometry_by_ratio(view_base_ref, 
+									base_window_geometry.width/2-75 - 200 +(200*i));
+			double y_position = view_base_recount_y_geometry_by_ratio(view_base_ref, 
+									30+70*j);	
+
+			gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+					this->button_matrix[i][j],
+					x_position,
+					y_position);
+		}
+	}
+
+
+	double btn_horizontal_line_position = view_base_recount_y_geometry_by_ratio(view_base_ref, 410);
+
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->btn_prev,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, base_window_geometry.width/2-75 - 200),
+			btn_horizontal_line_position);
+
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->btn_back,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, base_window_geometry.width/2-75),
+			btn_horizontal_line_position);
+
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->btn_next,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, base_window_geometry.width/2-75 + 200),
+			btn_horizontal_line_position);
+
 
 }
 
 void view_manual_input_screen_signals(view_manual_input_screen * this)
+{
+	g_signal_connect(G_OBJECT(this->btn_prev), 
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_btn_prev_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->btn_back),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_btn_back_click_callback),
+			this->base_screen_ref->view_base_ref);
+
+	g_signal_connect(G_OBJECT(this->btn_next),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_btn_next_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[0][0]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_0x0_clicked_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[0][1]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_0x1_clicked_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[0][2]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_0x2_clicked_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[0][3]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_0x3_clicked_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[0][4]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_0x4_clicked_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[1][0]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_1x0_clicked_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[1][1]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_1x1_clicked_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[1][2]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_1x2_clicked_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[1][3]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_1x3_clicked_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[1][4]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_1x4_clicked_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[2][0]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_2x0_clicked_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[2][1]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_2x1_clicked_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[2][2]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_2x2_clicked_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[2][3]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_2x3_clicked_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[2][4]),
+			"clicked",
+			G_CALLBACK(view_manual_input_screen_button_metrix_2x4_clicked_callback),
+			this);
+}
+
+void view_manual_input_screen_btn_prev_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_btn_back_click_callback(GtkWidget * widget, gpointer param)
+{
+	view_base_show_order_screen((view_base*) param);
+}
+
+void view_manual_input_screen_btn_next_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_0x0_clicked_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_0x1_clicked_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_0x2_clicked_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_0x3_clicked_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_0x4_clicked_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_1x0_clicked_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_1x1_clicked_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_1x2_clicked_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_1x3_clicked_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_1x4_clicked_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_2x0_clicked_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_2x1_clicked_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_2x2_clicked_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_2x3_clicked_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_manual_input_screen_button_metrix_2x4_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
@@ -1448,21 +1850,329 @@ view_order_finish_screen * view_order_finish_screen_new(view_base * view_base_re
 
 void view_order_finish_screen_build_widgets(view_order_finish_screen * this)
 {
+	this->button_matrix = (GtkWidget ***) malloc(sizeof(GtkWidget**)*4);
 
+	for(int i = 0; i < 4; i++)
+	{
+		this->button_matrix[i] = (GtkWidget **) malloc(sizeof(GtkWidget*)*3);
+
+		for(int j = 0; j < 3; j++)
+		{
+			this->button_matrix[i][j] = view_base_screen_build_button(this->base_screen_ref, 50, 50);
+		}
+	}
+	
+	this->btn_print_bill = view_base_screen_build_button(this->base_screen_ref, 120, 50);
+	this->btn_back = view_base_screen_build_button(this->base_screen_ref, 120, 50);
+	this->btn_finish = view_base_screen_build_button(this->base_screen_ref, 120, 50);
+
+	this->lbl_order_sum = view_base_screen_build_label(this->base_screen_ref, 200, 40, 0);
+	this->lbl_customer_payed = view_base_screen_build_label(this->base_screen_ref, 200, 40, 0);
+	this->lbl_money_back = view_base_screen_build_label(this->base_screen_ref, 200, 40, 0);
+	this->lbl_order_sum_price = view_base_screen_build_label(this->base_screen_ref, 200, 40, 1);
+	this->lbl_count_money_back = view_base_screen_build_label(this->base_screen_ref, 200, 40, 1);
+	this->entry_customer_payed = view_base_screen_build_label(this->base_screen_ref, 200, 35, 1);
+	
 }
 
 
 void view_order_finish_screen_language(view_order_finish_screen * this)
 {
+	lang * cz_lang = multi_lang_get_current_language(this->base_screen_ref->view_base_ref->multi_lang_ref);
+	GtkWidget * button_label;
+	
+	button_label = gtk_bin_get_child(GTK_BIN(this->btn_print_bill));
+	gtk_label_set_justify(GTK_LABEL(button_label), GTK_JUSTIFY_CENTER);
+	view_base_screen_set_label_markup_text(button_label, cz_lang->btn_print_bill_text, 20);
 
+	button_label = gtk_bin_get_child(GTK_BIN(this->btn_back));
+	view_base_screen_set_label_markup_text(button_label, cz_lang->btn_back_text, 20);
+
+	button_label = gtk_bin_get_child(GTK_BIN(this->btn_finish));
+	gtk_label_set_justify(GTK_LABEL(button_label), GTK_JUSTIFY_CENTER);
+	view_base_screen_set_label_markup_text(button_label, cz_lang->btn_finish_text, 20);
+
+ 	view_base_screen_set_label_markup_text(this->lbl_order_sum, cz_lang->lbl_order_sum_text, 20);
+	view_base_screen_set_label_markup_text(this->lbl_customer_payed, cz_lang->lbl_customer_payed_text, 20);
+	view_base_screen_set_label_markup_text(this->lbl_money_back, cz_lang->lbl_money_back_text, 20);
+	view_base_screen_set_label_markup_text(this->lbl_count_money_back, cz_lang->default_sum_price_text, 20);
+	view_base_screen_set_label_markup_text(this->lbl_order_sum_price, cz_lang->default_sum_price_text, 20);
+
+	gtk_label_set_markup(GTK_LABEL(this->entry_customer_payed), "<span font_desc=\"20\"><b>0.0 Kč</b></span>");
+
+
+	button_label = gtk_bin_get_child(GTK_BIN(this->button_matrix[0][0]));
+	view_base_screen_set_label_markup_text(button_label, "C", 20);
+
+	button_label = gtk_bin_get_child(GTK_BIN(this->button_matrix[0][1]));
+	view_base_screen_set_label_markup_text(button_label, "CE", 20);
+
+	button_label = gtk_bin_get_child(GTK_BIN(this->button_matrix[0][2]));
+	view_base_screen_set_label_markup_text(button_label, "0", 20);
+
+	button_label = gtk_bin_get_child(GTK_BIN(this->button_matrix[1][0]));
+	view_base_screen_set_label_markup_text(button_label, "1", 20);
+
+	button_label = gtk_bin_get_child(GTK_BIN(this->button_matrix[1][1]));
+	view_base_screen_set_label_markup_text(button_label, "4", 20);
+
+	button_label = gtk_bin_get_child(GTK_BIN(this->button_matrix[1][2]));
+	view_base_screen_set_label_markup_text(button_label, "7", 20);
+
+	button_label = gtk_bin_get_child(GTK_BIN(this->button_matrix[2][0]));
+	view_base_screen_set_label_markup_text(button_label, "2", 20);
+
+	button_label = gtk_bin_get_child(GTK_BIN(this->button_matrix[2][1]));
+	view_base_screen_set_label_markup_text(button_label, "5", 20);
+
+	button_label = gtk_bin_get_child(GTK_BIN(this->button_matrix[2][2]));
+	view_base_screen_set_label_markup_text(button_label, "8", 20);
+
+	button_label = gtk_bin_get_child(GTK_BIN(this->button_matrix[3][0]));
+	view_base_screen_set_label_markup_text(button_label, "3", 20);
+
+	button_label = gtk_bin_get_child(GTK_BIN(this->button_matrix[3][1]));
+	view_base_screen_set_label_markup_text(button_label, "6", 20);
+
+	button_label = gtk_bin_get_child(GTK_BIN(this->button_matrix[3][2]));
+	view_base_screen_set_label_markup_text(button_label, "9", 20);
 }
 
 void view_order_finish_screen_pack_widgets(view_order_finish_screen * this)
 {
+	view_base * view_base_ref = this->base_screen_ref->view_base_ref;
+	geometry window_base_geometry = view_base_ref->window_base_geometry;
+
+	for(int i = 0; i < 4; i++)
+	{
+		for(int j = 0; j < 3; j ++)
+		{
+			double button_x_position = view_base_recount_x_geometry_by_ratio(view_base_ref, 
+								window_base_geometry.width-310+(70*i));
+			double button_y_position = view_base_recount_y_geometry_by_ratio(view_base_ref, 
+								window_base_geometry.height-430+(70*j));
+
+			gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+					this->button_matrix[i][j],
+					button_x_position,
+					button_y_position);
+		}
+	}
+
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container),
+			this->btn_finish,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, window_base_geometry.width-50-120),
+			view_base_recount_y_geometry_by_ratio(view_base_ref, window_base_geometry.height-125-80));
+
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container),
+			this->btn_back,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, window_base_geometry.width-50-260),
+			view_base_recount_y_geometry_by_ratio(view_base_ref, window_base_geometry.height-125-80));
+
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container),
+			this->btn_print_bill,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
+			view_base_recount_y_geometry_by_ratio(view_base_ref, window_base_geometry.height-125-80));
+
+
+
+	/*
+	 *
+	GtkWidget * lbl_sum = view_base_screen_build_label(this->base_screen_ref, 200, 50, 0);
+	GtkWidget * lbl_payed = view_base_screen_build_label(this->base_screen_ref, 200, 50, 0);
+	GtkWidget * lbl_money_back = view_base_screen_build_label(this->base_screen_ref, 200, 50, 0);
+	GtkWidget * lbl_sum_price = view_base_screen_build_label(this->base_screen_ref, 200, 50, 1);
+	GtkWidget * lbl_count_money_back = view_base_screen_build_label(this->base_screen_ref, 200, 50, 1);
+
+	this->entry_payed = gtk_entry_new();
+	 */ 
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->lbl_order_sum,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
+			view_base_recount_y_geometry_by_ratio(view_base_ref, 20));
+
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->lbl_customer_payed,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
+			view_base_recount_y_geometry_by_ratio(view_base_ref, 60));
+
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->lbl_money_back,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
+			view_base_recount_y_geometry_by_ratio(view_base_ref, 100));
+
+
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->lbl_order_sum_price,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, window_base_geometry.width-250),
+			view_base_recount_y_geometry_by_ratio(view_base_ref, 20));
+
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->entry_customer_payed,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, window_base_geometry.width-250),
+			view_base_recount_y_geometry_by_ratio(view_base_ref, 60));
+
+	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
+			this->lbl_count_money_back,
+			view_base_recount_x_geometry_by_ratio(view_base_ref, window_base_geometry.width-250),
+			view_base_recount_y_geometry_by_ratio(view_base_ref, 100));
+
+
 
 }
 
 void view_order_finish_screen_signals(view_order_finish_screen * this)
+{
+	g_signal_connect(G_OBJECT(this->btn_print_bill), 
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_btn_print_bill_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->btn_back),
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_btn_back_click_callback),
+			this->base_screen_ref->view_base_ref);
+
+	g_signal_connect(G_OBJECT(this->btn_finish),
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_btn_finish_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[0][0]),
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_button_matrix_0x0_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[0][1]),
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_button_matrix_0x1_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[0][2]),
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_button_matrix_0x2_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[1][0]),
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_button_matrix_1x0_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[1][1]),
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_button_matrix_1x1_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[1][2]),
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_button_matrix_2x2_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[2][0]),
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_button_matrix_2x0_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[2][1]),
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_button_matrix_2x1_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[2][2]),
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_button_matrix_2x2_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[3][0]),
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_button_matrix_3x0_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[3][1]),
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_button_matrix_3x1_click_callback),
+			this);
+
+	g_signal_connect(G_OBJECT(this->button_matrix[3][2]),
+			"clicked",
+			G_CALLBACK(view_order_finish_screen_button_matrix_3x2_click_callback),
+			this);
+}
+
+
+void view_order_finish_screen_btn_print_bill_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_order_finish_screen_btn_back_click_callback(GtkWidget * widget, gpointer param)
+{
+	view_base_show_order_screen((view_base *) param);
+}
+
+void view_order_finish_screen_btn_finish_click_callback(GtkWidget * widget, gpointer param)
+{
+	view_order_finish_screen * this = (view_order_finish_screen *) param;
+	view_base_show_order_screen(this->base_screen_ref->view_base_ref);
+}
+
+
+void view_order_finish_screen_button_matrix_0x0_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_order_finish_screen_button_matrix_0x1_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_order_finish_screen_button_matrix_0x2_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_order_finish_screen_button_matrix_1x0_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_order_finish_screen_button_matrix_1x1_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_order_finish_screen_button_matrix_1x2_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_order_finish_screen_button_matrix_2x0_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_order_finish_screen_button_matrix_2x1_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_order_finish_screen_button_matrix_2x2_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_order_finish_screen_button_matrix_3x0_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_order_finish_screen_button_matrix_3x1_click_callback(GtkWidget * widget, gpointer param)
+{
+
+}
+
+void view_order_finish_screen_button_matrix_3x2_click_callback(GtkWidget * widget, gpointer param)
 {
 
 }
@@ -1476,13 +2186,13 @@ void view_order_finish_screen_finalize(view_order_finish_screen * this)
 
 /**************************** modul alarm_widget ****************************/
 
-alarm_widget * alarm_widget_new(alarm_buffer * alarm_buffer_ref, uint32_t width, uint32_t height)
+alarm_widget * alarm_widget_new(alarm_buffer * alarm_buffer_ref, geometry widget_geometry)
 {
 	alarm_widget * this = (alarm_widget *) malloc(sizeof(alarm_widget));
 
 	this->alarm_buffer_ref = alarm_buffer_ref;
-	this->width = width;
-	this->height = height;
+	this->widget_geometry.width = widget_geometry.width;
+	this->widget_geometry.height = widget_geometry.height;
 	this->blink = false;
 
 	alarm_widget_build(this);
@@ -1515,7 +2225,7 @@ gboolean alarm_widget_draw_callback(GtkWidget * drawing_area, cairo_t * cr, gpoi
 		gtk_widget_set_visible(GTK_WIDGET(this->draw_area), FALSE);
 	}
 
-	cairo_rectangle(cr, 0,0, this->width, this->height);
+	cairo_rectangle(cr, 0,0, this->widget_geometry.width, this->widget_geometry.height);
 
 	cairo_fill(cr);
 
@@ -1534,7 +2244,9 @@ gboolean alarm_widget_draw_callback(GtkWidget * drawing_area, cairo_t * cr, gpoi
 void alarm_widget_build(alarm_widget * this)
 {
 	this->draw_area = gtk_drawing_area_new();
-	gtk_widget_set_size_request(GTK_WIDGET(this->draw_area), this->width, this->height);
+	gtk_widget_set_size_request(GTK_WIDGET(this->draw_area), 
+				this->widget_geometry.width, 
+				this->widget_geometry.height);
 	gtk_widget_add_events(GTK_WIDGET(this->draw_area), GDK_BUTTON_PRESS_MASK);
 }
 
@@ -1603,11 +2315,6 @@ int main(int argv, char ** argc)
 
 	if(controler_ref != NULL)
 	{	
-		#if defined(_WIN32) || defined(_WIN64)
-			HWND var = GetConsoleWindow();
-			ShowWindow(var, SW_HIDE);
-		#endif
-
 		gtk_init(&argv, &argc);
 
 		view_ref = view_new(controler_ref);
@@ -1615,10 +2322,6 @@ int main(int argv, char ** argc)
 		view_initialize(view_ref);
 
 		gtk_main();
-
-		#if defined(_WIN32) || defined(_WIN64)
-			ShowWindow(var, SW_SHOW);
-		#endif
 	}
 	else
 	{
