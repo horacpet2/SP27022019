@@ -114,6 +114,11 @@ typedef struct _view_order_finish_screen_ view_order_finish_screen;
 struct _alarm_widget_;
 typedef struct _alarm_widget_ alarm_widget;
 
+struct _value_widget_;
+typedef struct _value_widget_ value_widget;
+
+struct _order_list_widget_;
+typedef struct _order_list_widget_ order_list_widget;
 
 
 struct _geometry_;
@@ -326,13 +331,10 @@ struct _view_order_finish_screen_
 	GtkWidget * btn_print_bill;
 	GtkWidget * btn_back;
 	GtkWidget * btn_finish;
-
-	GtkWidget * lbl_order_sum;
-	GtkWidget * lbl_customer_payed;
-	GtkWidget * lbl_money_back;
-	GtkWidget * lbl_order_sum_price;
-	GtkWidget * entry_customer_payed;
-	GtkWidget * lbl_count_money_back;
+	
+	value_widget * order_sum_price;
+	value_widget * customer_payed;
+	value_widget * count_money_back;
 };
 
 struct _alarm_widget_
@@ -346,6 +348,47 @@ struct _alarm_widget_
 	bool blink;
 };
 
+
+
+struct _value_widget_
+{
+	geometry widget_geometry;
+
+	const char * label;
+	char * value;
+
+	uint32_t font_size;
+	const char * font_family;
+	
+	double bg_color[3];
+	double fg_color[3];
+
+	uint32_t left_padding;
+	uint32_t right_padding;
+
+	GtkWidget * draw_area;
+};
+
+
+struct _order_list_widget_
+{
+	geometry widget_geometry;
+
+	char ** column_title_list;
+	uint8_t column_title_size;
+
+	const char * font_family;
+	uint32_t font_size;
+
+	order_list * source_order_list;
+	
+	GtkWidget * draw_area;
+
+	bool is_row_selected;
+	uint32_t selected_row_index;
+
+	uint8_t visible_row_number;
+};
 
 
 /***************** deklarace funkcí **********************************/
@@ -517,6 +560,40 @@ void alarm_widget_reset_error_buffer_callback(GtkWidget * widget, GdkEventButton
 void alarm_widget_build(alarm_widget * this);
 void alarm_widget_signals(alarm_widget * this);
 void alarm_widget_finalize(alarm_widget * this);
+
+value_widget * value_widget_new(geometry widget_geometry);
+void value_widget_set_geometry(value_widget * this, geometry widget_geometry);
+geometry value_widget_get_geometry(value_widget * this);
+double * value_widget_get_forground_color(value_widget * this);
+double * value_widget_get_background_color(value_widget * this);
+void value_widet_set_foreground_color(value_widget * this, double fg_color[3]);
+void value_widget_set_background_color(value_widget * this, double bg_color[3]);
+void  value_widget_set_value(value_widget * this, char * value);
+char * value_widget_get_value(value_widget * this);
+void value_widget_set_label(value_widget * this, const char * label);
+const char * value_widget_get_label(value_widget * this);
+gboolean value_widget_draw_callback(GtkWidget * widget, cairo_t * cr, gpointer param);
+void value_widget_set_font_size(value_widget * this, uint32_t font_size);
+uint32_t value_widget_get_font_size(value_widget * this);
+void value_widget_set_font_family(value_widget * this, const char * font_family);
+const char * value_widget_get_font_family(value_widget * this);
+void value_widget_set_left_padding(value_widget * this, uint32_t left_padding);
+void value_widget_set_right_padding(value_widget * this, uint32_t right_padding);
+uint32_t value_widget_get_right_padding(value_widget * this);
+uint32_t value_widget_get_left_padding(value_widget * this);
+void value_widget_signals(value_widget * this);
+
+order_list_widget * order_list_widget_new(geometry widget_geometry);
+void order_list_widget_set_column_structure(order_list_widget * this, uint8_t columnt_title_size, const char ** column_title_list);
+void order_list_widget_signals(order_list_widget * this);
+void order_list_widget_set_source(order_list_widget * this, order_list * source_order_list);
+void order_list_widget_repaint(order_list_widget * this);
+uint32_t order_list_widget_get_selected_row(order_list_widget * this);
+bool order_list_widget_is_selected(order_list_widget * this);
+void order_list_widget_cancel_selection(order_list_widget * this);
+gboolean order_list_widget_draw_callback(GtkWidget * widget, cairo_t * cr, gpointer param);
+gpointer order_list_widget_click_callback(GtkWidget * widget, GdkEvent * event, gpointer param);
+gboolean order_list_widget_scroll_callback(GtkWidget * widget, GdkEvent * event, gpointer param);
 
 
 /********************* definice funkcí *******************************/
@@ -1866,13 +1943,34 @@ void view_order_finish_screen_build_widgets(view_order_finish_screen * this)
 	this->btn_back = view_base_screen_build_button(this->base_screen_ref, 120, 50);
 	this->btn_finish = view_base_screen_build_button(this->base_screen_ref, 120, 50);
 
-	this->lbl_order_sum = view_base_screen_build_label(this->base_screen_ref, 200, 40, 0);
-	this->lbl_customer_payed = view_base_screen_build_label(this->base_screen_ref, 200, 40, 0);
-	this->lbl_money_back = view_base_screen_build_label(this->base_screen_ref, 200, 40, 0);
-	this->lbl_order_sum_price = view_base_screen_build_label(this->base_screen_ref, 200, 40, 1);
-	this->lbl_count_money_back = view_base_screen_build_label(this->base_screen_ref, 200, 40, 1);
-	this->entry_customer_payed = view_base_screen_build_label(this->base_screen_ref, 200, 35, 1);
-	
+	geometry value_widget_geometry;
+	value_widget_geometry.width = view_base_recount_x_geometry_by_ratio(this->base_screen_ref->view_base_ref, this->base_screen_ref->view_base_ref->window_base_geometry.width-100);
+	value_widget_geometry.height = view_base_recount_y_geometry_by_ratio(this->base_screen_ref->view_base_ref, 30);
+
+	double bg_color_1[3] = {0.84, 0.84, 0.84};
+	double bg_color_2[3] = {0.91, 0.91, 0.91};
+
+	this->order_sum_price = value_widget_new(value_widget_geometry);
+	value_widget_set_font_size(this->order_sum_price, 30);
+	value_widget_set_left_padding(this->order_sum_price, 30);
+	value_widget_set_right_padding(this->order_sum_price, 30);
+	value_widget_set_font_family(this->order_sum_price, "Arial");
+	value_widget_set_background_color(this->order_sum_price, bg_color_2);
+
+	this->customer_payed = value_widget_new(value_widget_geometry);
+	value_widget_set_font_size(this->customer_payed, 30);
+	value_widget_set_left_padding(this->customer_payed, 30);
+	value_widget_set_right_padding(this->customer_payed, 30);
+	value_widget_set_font_family(this->customer_payed, "Arial");
+	value_widget_set_background_color(this->customer_payed, bg_color_1);
+
+	this->count_money_back = value_widget_new(value_widget_geometry);
+	value_widget_set_background_color(this->count_money_back, bg_color_2);
+	value_widget_set_font_size(this->count_money_back, 30);
+	value_widget_set_left_padding(this->count_money_back, 30);
+	value_widget_set_right_padding(this->count_money_back, 30);
+	value_widget_set_font_family(this->count_money_back, "Arial");
+
 }
 
 
@@ -1892,13 +1990,13 @@ void view_order_finish_screen_language(view_order_finish_screen * this)
 	gtk_label_set_justify(GTK_LABEL(button_label), GTK_JUSTIFY_CENTER);
 	view_base_screen_set_label_markup_text(button_label, cz_lang->btn_finish_text, 20);
 
- 	view_base_screen_set_label_markup_text(this->lbl_order_sum, cz_lang->lbl_order_sum_text, 20);
-	view_base_screen_set_label_markup_text(this->lbl_customer_payed, cz_lang->lbl_customer_payed_text, 20);
-	view_base_screen_set_label_markup_text(this->lbl_money_back, cz_lang->lbl_money_back_text, 20);
-	view_base_screen_set_label_markup_text(this->lbl_count_money_back, cz_lang->default_sum_price_text, 20);
-	view_base_screen_set_label_markup_text(this->lbl_order_sum_price, cz_lang->default_sum_price_text, 20);
+	value_widget_set_label(this->order_sum_price, cz_lang->lbl_order_sum_text);
+	value_widget_set_label(this->customer_payed, cz_lang->lbl_customer_payed_text);
+	value_widget_set_label(this->count_money_back, cz_lang->lbl_money_back_text);
 
-	gtk_label_set_markup(GTK_LABEL(this->entry_customer_payed), "<span font_desc=\"20\"><b>0.0 Kč</b></span>");
+	value_widget_set_value(this->order_sum_price, (char*) cz_lang->default_sum_price_text);
+	value_widget_set_value(this->customer_payed, (char*) cz_lang->default_sum_price_text);
+	value_widget_set_value(this->count_money_back, (char*) cz_lang->default_sum_price_text);
 
 
 	button_label = gtk_bin_get_child(GTK_BIN(this->button_matrix[0][0]));
@@ -1987,38 +2085,19 @@ void view_order_finish_screen_pack_widgets(view_order_finish_screen * this)
 	this->entry_payed = gtk_entry_new();
 	 */ 
 	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
-			this->lbl_order_sum,
+			this->order_sum_price->draw_area,
 			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
 			view_base_recount_y_geometry_by_ratio(view_base_ref, 20));
 
 	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
-			this->lbl_customer_payed,
+			this->customer_payed->draw_area,
 			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
-			view_base_recount_y_geometry_by_ratio(view_base_ref, 60));
+			view_base_recount_y_geometry_by_ratio(view_base_ref, 70));
 
 	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
-			this->lbl_money_back,
+			this->count_money_back->draw_area,
 			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
-			view_base_recount_y_geometry_by_ratio(view_base_ref, 100));
-
-
-	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
-			this->lbl_order_sum_price,
-			view_base_recount_x_geometry_by_ratio(view_base_ref, window_base_geometry.width-250),
-			view_base_recount_y_geometry_by_ratio(view_base_ref, 20));
-
-	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
-			this->entry_customer_payed,
-			view_base_recount_x_geometry_by_ratio(view_base_ref, window_base_geometry.width-250),
-			view_base_recount_y_geometry_by_ratio(view_base_ref, 60));
-
-	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
-			this->lbl_count_money_back,
-			view_base_recount_x_geometry_by_ratio(view_base_ref, window_base_geometry.width-250),
-			view_base_recount_y_geometry_by_ratio(view_base_ref, 100));
-
-
-
+			view_base_recount_y_geometry_by_ratio(view_base_ref, 120));
 }
 
 void view_order_finish_screen_signals(view_order_finish_screen * this)
@@ -2273,6 +2352,312 @@ void alarm_widget_finalize(alarm_widget * this)
 {
 	free(this);
 }
+
+
+/*************************** modul value_widget *******************************/
+
+value_widget * value_widget_new(geometry widget_geometry)
+{
+	value_widget * this = (value_widget *) malloc(sizeof(value_widget));
+
+	this->widget_geometry.width = widget_geometry.width;
+	this->widget_geometry.height = widget_geometry.height;
+
+	this->label = NULL;
+	this->value = NULL;
+
+	this->font_size = 12;
+	this->font_family = NULL;
+
+	this->left_padding = 10;
+	this->right_padding = 10;
+
+	this->bg_color[0] = 1.0;
+	this->bg_color[1] = 1.0;
+	this->bg_color[2] = 1.0;
+
+	this->fg_color[0] = 0.0;
+	this->fg_color[1] = 0.0;
+	this->fg_color[2] = 0.0;
+
+	this->draw_area = gtk_drawing_area_new();
+	gtk_widget_set_size_request(GTK_WIDGET(this->draw_area), widget_geometry.width, widget_geometry.height);
+
+	value_widget_signals(this);
+
+	return this;
+}
+
+
+void value_widget_set_geometry(value_widget * this, geometry widget_geometry)
+{
+	this->widget_geometry.width = widget_geometry.width;
+	this->widget_geometry.height = widget_geometry.height;
+}
+
+geometry value_widget_get_geometry(value_widget * this)
+{
+	return this->widget_geometry;
+}
+
+double * value_widget_get_forground_color(value_widget * this)
+{
+	return this->fg_color;
+}
+
+double * value_widget_get_background_color(value_widget * this)
+{
+	return this->bg_color;
+}
+
+void value_widet_set_foreground_color(value_widget * this, double fg_color[3])
+{
+	this->fg_color[0] = fg_color[0];
+	this->fg_color[1] = fg_color[1];
+	this->fg_color[2] = fg_color[2];
+}
+
+void value_widget_set_background_color(value_widget * this, double bg_color[3])
+{
+	this->bg_color[0] = bg_color[0];
+	this->bg_color[1] = bg_color[1];
+	this->bg_color[2] = bg_color[2];
+}
+
+void value_widget_set_value(value_widget * this, char * value)
+{
+	this->value = value;
+	gtk_widget_queue_draw(GTK_WIDGET(this->draw_area));
+}
+
+char * value_widget_get_value(value_widget * this)
+{
+	return this->value;
+}
+
+void value_widget_set_label(value_widget * this, const char * label)
+{
+	this->label = label;
+	gtk_widget_queue_draw(GTK_WIDGET(this->draw_area));
+}
+
+const char * value_widget_get_label(value_widget * this)
+{
+	return this->label;
+}
+
+gboolean value_widget_draw_callback(GtkWidget * widget, cairo_t * cr, gpointer param)
+{
+	value_widget * this = (value_widget *) param;
+	cairo_text_extents_t extents;
+
+	cairo_set_source_rgb(cr, this->bg_color[0], this->bg_color[1], this->bg_color[2]);
+	cairo_rectangle(cr, 0,0, this->widget_geometry.width, this->widget_geometry.height);
+
+	cairo_fill(cr);
+
+	cairo_set_source_rgb(cr, this->fg_color[0], this->fg_color[1], this->fg_color[2]);
+	cairo_set_font_size(cr, this->font_size);
+	
+	if(this->font_family != NULL)
+		cairo_select_font_face(cr, this->font_family, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+
+	if(this->label != NULL)
+	{
+		cairo_text_extents(cr, this->label, &extents);
+		cairo_move_to(cr, this->left_padding, this->widget_geometry.height/2+extents.height/4);
+		cairo_show_text(cr, this->label);
+	}
+
+	if(this->value != NULL)
+	{
+		cairo_text_extents(cr, this->value, &extents);
+		cairo_move_to(cr, this->widget_geometry.width - extents.width - this->right_padding, this->widget_geometry.height/2+extents.height/2);
+		cairo_show_text(cr, this->value);
+	}
+
+	cairo_stroke(cr);
+
+	return FALSE;
+}
+
+void value_widget_set_font_family(value_widget * this, const char * font_family)
+{
+	this->font_family = font_family;
+}
+
+const char * value_widget_get_font_family(value_widget * this)
+{
+	return this->font_family;
+}
+
+void value_widget_set_font_size(value_widget * this, uint32_t font_size)
+{
+	this->font_size = font_size;
+}
+
+uint32_t valie_widget_get_font_size(value_widget * this)
+{
+	return this->font_size;
+}
+
+void value_widget_set_left_padding(value_widget * this, uint32_t left_padding)
+{
+	this->left_padding = left_padding;
+}
+
+void value_widget_set_right_padding(value_widget * this, uint32_t right_padding)
+{
+	this->right_padding = right_padding;
+}
+
+uint32_t value_widget_get_right_padding(value_widget * this)
+{	
+	return this->right_padding;
+}
+
+uint32_t value_widget_get_left_padding(value_widget * this)
+{
+	return this->left_padding;
+}
+
+void value_widget_signals(value_widget * this)
+{
+	g_signal_connect(G_OBJECT(this->draw_area),
+				"draw",
+				G_CALLBACK(value_widget_draw_callback),
+				this);
+}
+
+
+/********************************* modul order_list_widget **********************/
+
+
+order_list_widget * order_list_widget_new(geometry widget_geometry)
+{
+	order_list_widget * this = (order_list_widget *) malloc(sizeof(order_list_widget));
+
+
+	this->widget_geometry.width = widget_geometry.width;
+	this->widget_geometry.height = widget_geometry.height;
+
+	this->draw_area = gtk_drawing_area_new();
+	gtk_widget_set_size_request(GTK_WIDGET(this->draw_area), widget_geometry.width, widget_geometry.height);
+
+	this->column_title_list = NULL;
+	this->column_title_size = 0;
+
+	this->font_family = NULL;
+	this->font_size = 12;
+
+	this->source_order_list = FALSE;
+
+	this->is_row_selected = false;;
+	this->selected_row_index = 0;
+	this->visible_row_number = 3;
+
+	order_list_widget_signals(this);
+
+	return this;
+}
+
+void order_list_widget_set_column_structure(order_list_widget * this, uint8_t columnt_title_size, const char ** column_title_list)
+{
+
+}
+
+void order_list_widget_set_visible_row_number(order_list_widget * this, uint8_t visible_row_number)
+{
+	this->visible_row_number = visible_row_number;
+}
+
+void order_list_widget_signals(order_list_widget * this)
+{
+	g_signal_connect(G_OBJECT(this->draw_area), 
+				"draw",
+				G_CALLBACK(order_list_widget_draw_callback),
+				this);
+
+	g_signal_connect(G_OBJECT(this->draw_area),
+				"button_press_event",
+				G_CALLBACK(order_list_widget_click_callback),
+				this);
+
+	g_signal_connect(G_OBJECT(this->draw_area),
+				"scroll_event",
+				G_CALLBACK(order_list_widget_scroll_callback),
+				this);
+}
+
+void order_list_widget_set_source(order_list_widget * this, order_list * source_order_list)
+{
+	this->source_order_list = source_order_list;
+}
+
+void order_list_widget_repaint(order_list_widget * this)
+{
+	gtk_widget_queue_draw(GTK_WIDGET(this->draw_area));
+}
+
+uint32_t order_list_widget_get_selected_row(order_list_widget * this)
+{
+	return this->selected_row_index;
+}
+
+bool order_list_widget_is_selected(order_list_widget * this)
+{
+	return this->is_row_selected;
+}
+
+void order_list_widget_cancel_selection(order_list_widget * this)
+{
+	this->is_row_selected = false;
+	this->selected_row_index = 0;
+}
+
+gboolean order_list_widget_draw_callback(GtkWidget * widget, cairo_t * cr, gpointer param)
+{
+	order_list_widget * this = (order_list_widget*) param;
+
+	cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
+	cairo_rectangle(cr, 0,0, this->widget_geometry.width, this->widget_geometry.height);
+	cairo_fill(cr);
+
+	cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
+	
+	if(this->font_family != NULL)
+		cairo_select_font_face(cr, this->font_family, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+
+	if(this->column_title_list != NULL)
+	{
+		for(int i = 0; i < this->column_title_size; i++)
+		{
+			cairo_text_extents_t extent;
+			cairo_text_extents(cr, this->column_title_list[i], extent);
+			
+			cairo_move_to(cr, );
+			cairo_show_text(cr, this->column_title_list[i]);	
+		}
+	}
+
+	cairo_stroke(cr);
+
+	return FALSE;
+}
+
+gpointer order_list_widget_click_callback(GtkWidget * widget, GdkEvent * event, gpointer param)
+{
+
+	return FALSE;
+}
+
+gboolean order_list_widget_scroll_callback(GtkWidget * widget, GdkEvent * event, gpointer param)
+{
+	return FALSE;
+}
+
+
+
 
 
 /********************** definice unit testů **********************************/
