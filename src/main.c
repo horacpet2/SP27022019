@@ -6,6 +6,8 @@
 #include <string.h>
 #include <stdarg.h>
 
+#include <aclib.h>
+
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
 #include <Winspool.h>
@@ -293,8 +295,7 @@ struct _view_order_screen_
 {
 	view_base_screen * base_screen_ref;
 
-	GtkWidget * list;
-	GtkWidget * scroll;
+	order_list_widget * list_widget;
 
 	GtkWidget * btn_clear_order;
 	GtkWidget * btn_increase_quantity;
@@ -332,6 +333,13 @@ struct _view_order_finish_screen_
 	GtkWidget * btn_back;
 	GtkWidget * btn_finish;
 	
+	c_string * calculator_buffer;
+	c_string * order_price_buffer;
+	c_string * money_back_buffer;
+
+	uint32_t calculator_register;
+	uint32_t counter_money_register;
+
 	value_widget * order_sum_price;
 	value_widget * customer_payed;
 	value_widget * count_money_back;
@@ -355,7 +363,7 @@ struct _value_widget_
 	geometry widget_geometry;
 
 	const char * label;
-	char * value;
+	c_string * value;
 
 	uint32_t font_size;
 	const char * font_family;
@@ -374,8 +382,7 @@ struct _order_list_widget_
 {
 	geometry widget_geometry;
 
-	char ** column_title_list;
-	uint8_t column_title_size;
+	array_list * header_columns;
 
 	const char * font_family;
 	uint32_t font_size;
@@ -488,7 +495,6 @@ void view_bill_viewer_screen_finalize(view_bill_viewer_screen * this);
 
 view_order_screen * view_order_screen_new(view_base * view_base_ref);
 void view_order_screen_build_widgets(view_order_screen * this);
-GtkTreeViewColumn * view_order_screen_add_header_column(uint32_t position, const char * title);
 void view_order_screen_build_list_widget(view_order_screen * this);
 void view_order_screen_language(view_order_screen * this);
 void view_order_screen_pack_widgets(view_order_screen * this);
@@ -537,6 +543,8 @@ void view_order_finish_screen_build_widgets(view_order_finish_screen * this);
 void view_order_finish_screen_pack_widgets(view_order_finish_screen * this);
 void view_order_finish_screen_language(view_order_finish_screen * this);
 void view_order_finish_screen_signals(view_order_finish_screen * this);
+void view_order_finish_screen_delete_digit_in_calculator_buffer(view_order_finish_screen * this);
+void view_order_finish_screen_append_digit_to_calculator_buffer(view_order_finish_screen * this, uint8_t  digit);
 void view_order_finish_screen_btn_print_bill_click_callback(GtkWidget * widget, gpointer param);
 void view_order_finish_screen_btn_back_click_callback(GtkWidget * widget, gpointer param);
 void view_order_finish_screen_btn_finish_click_callback(GtkWidget * widget, gpointer param);
@@ -568,8 +576,8 @@ double * value_widget_get_forground_color(value_widget * this);
 double * value_widget_get_background_color(value_widget * this);
 void value_widet_set_foreground_color(value_widget * this, double fg_color[3]);
 void value_widget_set_background_color(value_widget * this, double bg_color[3]);
-void  value_widget_set_value(value_widget * this, char * value);
-char * value_widget_get_value(value_widget * this);
+void  value_widget_set_value(value_widget * this, c_string * value);
+c_string * value_widget_get_value(value_widget * this);
 void value_widget_set_label(value_widget * this, const char * label);
 const char * value_widget_get_label(value_widget * this);
 gboolean value_widget_draw_callback(GtkWidget * widget, cairo_t * cr, gpointer param);
@@ -584,13 +592,18 @@ uint32_t value_widget_get_left_padding(value_widget * this);
 void value_widget_signals(value_widget * this);
 
 order_list_widget * order_list_widget_new(geometry widget_geometry);
-void order_list_widget_set_column_structure(order_list_widget * this, uint8_t columnt_title_size, const char ** column_title_list);
+void order_list_widget_add_column(order_list_widget * this, const char * column_label);
+void order_list_widget_set_visible_row_number(order_list_widget * this, uint8_t visible_row_number);
 void order_list_widget_signals(order_list_widget * this);
 void order_list_widget_set_source(order_list_widget * this, order_list * source_order_list);
 void order_list_widget_repaint(order_list_widget * this);
 uint32_t order_list_widget_get_selected_row(order_list_widget * this);
 bool order_list_widget_is_selected(order_list_widget * this);
 void order_list_widget_cancel_selection(order_list_widget * this);
+void order_list_widget_draw_header_column(order_list_widget * this, cairo_t * cr);
+void order_list_widget_draw_content(order_list_widget * this, cairo_t * cr);
+void order_list_widget_set_font_size(order_list_widget * this, uint8_t font_size);
+void order_list_widget_set_font_family(order_list_widget * this, const char * font_family);
 gboolean order_list_widget_draw_callback(GtkWidget * widget, cairo_t * cr, gpointer param);
 gpointer order_list_widget_click_callback(GtkWidget * widget, GdkEvent * event, gpointer param);
 gboolean order_list_widget_scroll_callback(GtkWidget * widget, GdkEvent * event, gpointer param);
@@ -1152,10 +1165,15 @@ void view_window_exit_callback(GtkWidget * widget, gpointer param)
 
 void view_close_callback(GtkWidget * widget, GdkEventButton * event, gpointer * param)
 {
+	view * this = (view*) param;
+
 	if(event->type == GDK_2BUTTON_PRESS)
 	{
-		view * this = (view*) param;
 		view_finalize(this);
+	}
+	else
+	{
+		view_base_show_settings_screen(this->view_base_ref);	
 	}
 }
 
@@ -1369,49 +1387,19 @@ view_order_screen * view_order_screen_new(view_base * view_base_ref)
 	return this;
 }
 
-GtkTreeViewColumn * view_order_screen_add_header_column(uint32_t position, const char * title)
-{
-	GtkCellRenderer * renderer = gtk_cell_renderer_text_new();
-	g_object_set(renderer, "size", 20, NULL);
-
-	GtkTreeViewColumn * column = gtk_tree_view_column_new_with_attributes(title, renderer, NULL);
-
-
-	gboolean size_set;
-	int size;
-
-	g_object_get(renderer, "size", &size, "size-set", &size_set, NULL);
-	printf("%d - %s\n", size, ((size_set == TRUE) ? "true": "false"));
-
-	gtk_tree_view_column_set_resizable(GTK_TREE_VIEW_COLUMN(column), FALSE);
-	gtk_tree_view_column_set_min_width (column, 20);
-	gtk_tree_view_column_set_expand (column, TRUE);
-
-	return column;
-}
-
 void view_order_screen_build_list_widget(view_order_screen * this)
 {
-	geometry window_base_geometry = this->base_screen_ref->view_base_ref->window_base_geometry;
+	view_base * view_base_ref = this->base_screen_ref->view_base_ref;
+	geometry window_base_geometry = view_base_ref->window_base_geometry;
+	geometry widget_geometry;
+	widget_geometry.width = view_base_recount_x_geometry_by_ratio(view_base_ref, window_base_geometry.width-100);
+	widget_geometry.height = view_base_recount_y_geometry_by_ratio(view_base_ref, 300);
 
-	GtkTreeStore * store = gtk_tree_store_new(N_COLUMNS,
-						G_TYPE_STRING,
-						G_TYPE_INT,
-						G_TYPE_DOUBLE,
-						G_TYPE_DOUBLE);
-
-	this->list = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
-	gtk_widget_set_can_focus (GTK_WIDGET(this->list), FALSE);
-	g_object_unref (G_OBJECT (store));
-
-	this->scroll = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(this->scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-	gtk_container_add(GTK_CONTAINER(this->scroll), this->list);
-	gtk_widget_set_can_focus (GTK_WIDGET(this->scroll), FALSE);
-	gtk_widget_set_size_request(GTK_WIDGET(this->scroll), 
-			view_base_recount_x_geometry_by_ratio(this->base_screen_ref->view_base_ref, window_base_geometry.width-100),
-			view_base_recount_y_geometry_by_ratio(this->base_screen_ref->view_base_ref, window_base_geometry.height-125-160));
-
+	this->list_widget = order_list_widget_new(widget_geometry);
+	order_list_widget_set_source(this->list_widget, view_base_ref->controler_ref->order_list_ref);
+	order_list_widget_set_font_size(this->list_widget, 20);
+	order_list_widget_set_font_family(this->list_widget, "Arial");
+	order_list_widget_set_visible_row_number(this->list_widget, 5);
 }
 
 void view_order_screen_build_widgets(view_order_screen * this)
@@ -1463,14 +1451,13 @@ void view_order_screen_language(view_order_screen * this)
 	view_base_screen_set_label_markup_text(this->lbl_sum_price, cz_lang->default_sum_price_text, 20);
 
 
-	gtk_tree_view_append_column(GTK_TREE_VIEW(this->list), 
-				view_order_screen_add_header_column(GOODS_COLUMN, cz_lang->order_list_widget_goods_text));
-	gtk_tree_view_append_column(GTK_TREE_VIEW(this->list), 
-				view_order_screen_add_header_column(QUANTITY_COLUMN, cz_lang->order_list_widget_quantity_text));
-	gtk_tree_view_append_column(GTK_TREE_VIEW(this->list), 
-				view_order_screen_add_header_column(PRICE_WITHOUT_TAX_COLUMN, cz_lang->order_list_widget_price_without_tax_text));
-	gtk_tree_view_append_column(GTK_TREE_VIEW(this->list), 
-				view_order_screen_add_header_column(PRICE_WITH_TAX_COLUMN, cz_lang->order_list_widget_price_with_tax_text));
+	order_list_widget_add_column(this->list_widget, cz_lang->order_list_widget_goods_text);
+	order_list_widget_add_column(this->list_widget, cz_lang->order_list_widget_quantity_text);
+	order_list_widget_add_column(this->list_widget, cz_lang->order_list_widget_price_without_tax_text);
+	order_list_widget_add_column(this->list_widget, cz_lang->order_list_widget_price_with_tax_text);
+
+
+
 }
 
 void view_order_screen_pack_widgets(view_order_screen * this)
@@ -1516,10 +1503,12 @@ void view_order_screen_pack_widgets(view_order_screen * this)
 			view_base_recount_x_geometry_by_ratio(view_base_ref, window_base_geometry.width-250),
 			labels_line_position);
 
+	
 	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
-			this->scroll,
+			this->list_widget->draw_area,
 			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
 			view_base_recount_y_geometry_by_ratio(view_base_ref, 80));
+			
 }
 
 void view_order_screen_signals(view_order_screen * this)
@@ -1916,6 +1905,13 @@ view_order_finish_screen * view_order_finish_screen_new(view_base * view_base_re
 {
 	view_order_finish_screen * this = (view_order_finish_screen *) malloc(sizeof(view_order_finish_screen));
 
+	this->calculator_buffer = c_string_new_with_init("0 Kč");
+	this->order_price_buffer = c_string_new_with_init("0 Kč");
+	this->money_back_buffer = c_string_new_with_init("0 Kč");
+
+	this->calculator_register = 0;
+	this->counter_money_register = 0;
+
 	this->base_screen_ref = view_base_screen_new(view_base_ref);
 
 	view_order_finish_screen_build_widgets(this);
@@ -1955,7 +1951,8 @@ void view_order_finish_screen_build_widgets(view_order_finish_screen * this)
 	value_widget_set_left_padding(this->order_sum_price, 30);
 	value_widget_set_right_padding(this->order_sum_price, 30);
 	value_widget_set_font_family(this->order_sum_price, "Arial");
-	value_widget_set_background_color(this->order_sum_price, bg_color_2);
+	value_widget_set_value(this->order_sum_price, this->order_price_buffer);
+	//value_widget_set_background_color(this->order_sum_price, bg_color_2);
 
 	this->customer_payed = value_widget_new(value_widget_geometry);
 	value_widget_set_font_size(this->customer_payed, 30);
@@ -1963,13 +1960,16 @@ void view_order_finish_screen_build_widgets(view_order_finish_screen * this)
 	value_widget_set_right_padding(this->customer_payed, 30);
 	value_widget_set_font_family(this->customer_payed, "Arial");
 	value_widget_set_background_color(this->customer_payed, bg_color_1);
+	value_widget_set_value(this->customer_payed, this->calculator_buffer);
+
 
 	this->count_money_back = value_widget_new(value_widget_geometry);
-	value_widget_set_background_color(this->count_money_back, bg_color_2);
+	//value_widget_set_background_color(this->count_money_back, bg_color_2);
 	value_widget_set_font_size(this->count_money_back, 30);
 	value_widget_set_left_padding(this->count_money_back, 30);
 	value_widget_set_right_padding(this->count_money_back, 30);
 	value_widget_set_font_family(this->count_money_back, "Arial");
+	value_widget_set_value(this->count_money_back, this->money_back_buffer);
 
 }
 
@@ -1994,9 +1994,6 @@ void view_order_finish_screen_language(view_order_finish_screen * this)
 	value_widget_set_label(this->customer_payed, cz_lang->lbl_customer_payed_text);
 	value_widget_set_label(this->count_money_back, cz_lang->lbl_money_back_text);
 
-	value_widget_set_value(this->order_sum_price, (char*) cz_lang->default_sum_price_text);
-	value_widget_set_value(this->customer_payed, (char*) cz_lang->default_sum_price_text);
-	value_widget_set_value(this->count_money_back, (char*) cz_lang->default_sum_price_text);
 
 
 	button_label = gtk_bin_get_child(GTK_BIN(this->button_matrix[0][0]));
@@ -2072,18 +2069,6 @@ void view_order_finish_screen_pack_widgets(view_order_finish_screen * this)
 			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
 			view_base_recount_y_geometry_by_ratio(view_base_ref, window_base_geometry.height-125-80));
 
-
-
-	/*
-	 *
-	GtkWidget * lbl_sum = view_base_screen_build_label(this->base_screen_ref, 200, 50, 0);
-	GtkWidget * lbl_payed = view_base_screen_build_label(this->base_screen_ref, 200, 50, 0);
-	GtkWidget * lbl_money_back = view_base_screen_build_label(this->base_screen_ref, 200, 50, 0);
-	GtkWidget * lbl_sum_price = view_base_screen_build_label(this->base_screen_ref, 200, 50, 1);
-	GtkWidget * lbl_count_money_back = view_base_screen_build_label(this->base_screen_ref, 200, 50, 1);
-
-	this->entry_payed = gtk_entry_new();
-	 */ 
 	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
 			this->order_sum_price->draw_area,
 			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
@@ -2144,7 +2129,7 @@ void view_order_finish_screen_signals(view_order_finish_screen * this)
 
 	g_signal_connect(G_OBJECT(this->button_matrix[1][2]),
 			"clicked",
-			G_CALLBACK(view_order_finish_screen_button_matrix_2x2_click_callback),
+			G_CALLBACK(view_order_finish_screen_button_matrix_1x2_click_callback),
 			this);
 
 	g_signal_connect(G_OBJECT(this->button_matrix[2][0]),
@@ -2178,6 +2163,40 @@ void view_order_finish_screen_signals(view_order_finish_screen * this)
 			this);
 }
 
+void view_order_finish_screen_convert_string_price(uint32_t source_register, c_string * buffer)
+{
+	char string_price[16]; 
+	sprintf(string_price, "%d Kč", source_register);
+	c_string_set_string(buffer, string_price);
+}
+
+void view_order_finish_screen_append_digit_to_calculator_buffer(view_order_finish_screen * this, uint8_t digit)
+{
+	this->calculator_register = (this->calculator_register *10) + digit;
+	
+	view_order_finish_screen_convert_string_price(this->calculator_register, this->calculator_buffer);
+
+	gtk_widget_queue_draw(GTK_WIDGET(this->customer_payed->draw_area));
+	gtk_widget_queue_draw(GTK_WIDGET(this->count_money_back->draw_area));
+}
+
+void view_order_finish_screen_delete_digit_in_calculator_buffer(view_order_finish_screen * this)
+{
+	this->calculator_register = (this->calculator_register / 10);
+
+	if(this->calculator_register > 0)
+	{
+		view_order_finish_screen_convert_string_price(this->calculator_register, this->calculator_buffer);
+	}
+	else
+	{
+		c_string_set_string(this->calculator_buffer, "0 Kč");
+	}
+
+	gtk_widget_queue_draw(GTK_WIDGET(this->customer_payed->draw_area));
+	gtk_widget_queue_draw(GTK_WIDGET(this->count_money_back->draw_area));
+}
+
 
 void view_order_finish_screen_btn_print_bill_click_callback(GtkWidget * widget, gpointer param)
 {
@@ -2198,62 +2217,63 @@ void view_order_finish_screen_btn_finish_click_callback(GtkWidget * widget, gpoi
 
 void view_order_finish_screen_button_matrix_0x0_click_callback(GtkWidget * widget, gpointer param)
 {
-
+	c_string_set_string(((view_order_finish_screen*) param)->calculator_buffer, "0 Kč");
+	((view_order_finish_screen *) param)->calculator_register = 0;
 }
 
 void view_order_finish_screen_button_matrix_0x1_click_callback(GtkWidget * widget, gpointer param)
 {
-
+	view_order_finish_screen_delete_digit_in_calculator_buffer((view_order_finish_screen *) param);
 }
 
 void view_order_finish_screen_button_matrix_0x2_click_callback(GtkWidget * widget, gpointer param)
 {
-
+	view_order_finish_screen_append_digit_to_calculator_buffer((view_order_finish_screen*) param, 0);
 }
 
 void view_order_finish_screen_button_matrix_1x0_click_callback(GtkWidget * widget, gpointer param)
 {
-
+	view_order_finish_screen_append_digit_to_calculator_buffer((view_order_finish_screen*) param, 1);
 }
 
 void view_order_finish_screen_button_matrix_1x1_click_callback(GtkWidget * widget, gpointer param)
 {
-
+	view_order_finish_screen_append_digit_to_calculator_buffer((view_order_finish_screen*) param, 4);
 }
 
 void view_order_finish_screen_button_matrix_1x2_click_callback(GtkWidget * widget, gpointer param)
 {
-
+	view_order_finish_screen_append_digit_to_calculator_buffer((view_order_finish_screen*) param, 7);
 }
 
 void view_order_finish_screen_button_matrix_2x0_click_callback(GtkWidget * widget, gpointer param)
 {
-
+	view_order_finish_screen_append_digit_to_calculator_buffer((view_order_finish_screen*) param, 2);
 }
 
 void view_order_finish_screen_button_matrix_2x1_click_callback(GtkWidget * widget, gpointer param)
 {
-
+	view_order_finish_screen_append_digit_to_calculator_buffer((view_order_finish_screen*) param, 5);
 }
 
 void view_order_finish_screen_button_matrix_2x2_click_callback(GtkWidget * widget, gpointer param)
 {
-
+	view_order_finish_screen_append_digit_to_calculator_buffer((view_order_finish_screen*) param, 8);
 }
 
 void view_order_finish_screen_button_matrix_3x0_click_callback(GtkWidget * widget, gpointer param)
 {
-
+	view_order_finish_screen_append_digit_to_calculator_buffer((view_order_finish_screen*) param, 3);
 }
 
 void view_order_finish_screen_button_matrix_3x1_click_callback(GtkWidget * widget, gpointer param)
 {
-
+	view_order_finish_screen_append_digit_to_calculator_buffer((view_order_finish_screen*) param, 6);
 }
 
 void view_order_finish_screen_button_matrix_3x2_click_callback(GtkWidget * widget, gpointer param)
 {
-
+	view_order_finish_screen_append_digit_to_calculator_buffer((view_order_finish_screen*) param, 9);
 }
 
 void view_order_finish_screen_finalize(view_order_finish_screen * this)
@@ -2424,13 +2444,13 @@ void value_widget_set_background_color(value_widget * this, double bg_color[3])
 	this->bg_color[2] = bg_color[2];
 }
 
-void value_widget_set_value(value_widget * this, char * value)
+void value_widget_set_value(value_widget * this, c_string * value)
 {
 	this->value = value;
 	gtk_widget_queue_draw(GTK_WIDGET(this->draw_area));
 }
 
-char * value_widget_get_value(value_widget * this)
+c_string * value_widget_get_value(value_widget * this)
 {
 	return this->value;
 }
@@ -2471,9 +2491,9 @@ gboolean value_widget_draw_callback(GtkWidget * widget, cairo_t * cr, gpointer p
 
 	if(this->value != NULL)
 	{
-		cairo_text_extents(cr, this->value, &extents);
+		cairo_text_extents(cr, c_string_get_char_array(this->value), &extents);
 		cairo_move_to(cr, this->widget_geometry.width - extents.width - this->right_padding, this->widget_geometry.height/2+extents.height/2);
-		cairo_show_text(cr, this->value);
+		cairo_show_text(cr, c_string_get_char_array(this->value));
 	}
 
 	cairo_stroke(cr);
@@ -2544,9 +2564,8 @@ order_list_widget * order_list_widget_new(geometry widget_geometry)
 	this->draw_area = gtk_drawing_area_new();
 	gtk_widget_set_size_request(GTK_WIDGET(this->draw_area), widget_geometry.width, widget_geometry.height);
 
-	this->column_title_list = NULL;
-	this->column_title_size = 0;
-
+	this->header_columns = array_list_new();
+	
 	this->font_family = NULL;
 	this->font_size = 12;
 
@@ -2561,9 +2580,9 @@ order_list_widget * order_list_widget_new(geometry widget_geometry)
 	return this;
 }
 
-void order_list_widget_set_column_structure(order_list_widget * this, uint8_t columnt_title_size, const char ** column_title_list)
+void order_list_widget_add_column(order_list_widget * this, const char * column_label)
 {
-
+	array_list_add(this->header_columns, (void*) column_label);
 }
 
 void order_list_widget_set_visible_row_number(order_list_widget * this, uint8_t visible_row_number)
@@ -2615,35 +2634,65 @@ void order_list_widget_cancel_selection(order_list_widget * this)
 	this->selected_row_index = 0;
 }
 
+void order_list_widget_draw_header_column(order_list_widget * this, cairo_t * cr)
+{
+	cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
+	
+	if(array_list_size(this->header_columns) > 0)
+	{
+		double column_width = this->widget_geometry.width/array_list_size(this->header_columns);
+
+		for(int i = 0; i < array_list_size(this->header_columns); i++)
+		{
+			char * header_label = array_list_get(this->header_columns, i);
+			cairo_text_extents_t extent;
+			cairo_text_extents(cr, header_label, &extent);		
+
+			cairo_move_to(cr, column_width*i + (column_width-extent.width)/2, ((extent.height+25)+extent.height)/2);
+			cairo_show_text(cr, header_label);	
+		}
+
+	}
+
+	cairo_stroke(cr);
+}
+
+
+void order_list_widget_draw_content(order_list_widget * this, cairo_t * cr)
+{
+	
+}
+
 gboolean order_list_widget_draw_callback(GtkWidget * widget, cairo_t * cr, gpointer param)
 {
 	order_list_widget * this = (order_list_widget*) param;
+
+	if(this->font_family != NULL)
+		cairo_select_font_face(cr, this->font_family, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+
+	cairo_set_font_size(cr, this->font_size);
 
 	cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
 	cairo_rectangle(cr, 0,0, this->widget_geometry.width, this->widget_geometry.height);
 	cairo_fill(cr);
 
-	cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
-	
-	if(this->font_family != NULL)
-		cairo_select_font_face(cr, this->font_family, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-
-	if(this->column_title_list != NULL)
-	{
-		for(int i = 0; i < this->column_title_size; i++)
-		{
-			cairo_text_extents_t extent;
-			cairo_text_extents(cr, this->column_title_list[i], extent);
-			
-			cairo_move_to(cr, );
-			cairo_show_text(cr, this->column_title_list[i]);	
-		}
-	}
-
-	cairo_stroke(cr);
+	order_list_widget_draw_header_column(this, cr);
+	order_list_widget_draw_content(this, cr);
 
 	return FALSE;
 }
+
+
+void order_list_widget_set_font_size(order_list_widget * this, uint8_t font_size)
+{
+	this->font_size = font_size;
+}
+
+void order_list_widget_set_font_family(order_list_widget * this, const char * font_family)
+{
+	this->font_family = font_family;
+}
+
 
 gpointer order_list_widget_click_callback(GtkWidget * widget, GdkEvent * event, gpointer param)
 {
