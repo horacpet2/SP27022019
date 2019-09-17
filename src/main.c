@@ -35,15 +35,6 @@ enum _lang_index_description_
 	lang_num	
 };
 
-enum _order_list_columns_
-{
-	GOODS_COLUMN = 0,
-	QUANTITY_COLUMN,
-	PRICE_WITHOUT_TAX_COLUMN,
-	PRICE_WITH_TAX_COLUMN,
-
-	N_COLUMNS
-};
 
 /******************** deklarace struktur *******************************/
 
@@ -338,7 +329,6 @@ struct _view_order_finish_screen_
 	c_string * money_back_buffer;
 
 	uint32_t calculator_register;
-	uint32_t counter_money_register;
 
 	value_widget * order_sum_price;
 	value_widget * customer_payed;
@@ -543,6 +533,8 @@ void view_order_finish_screen_build_widgets(view_order_finish_screen * this);
 void view_order_finish_screen_pack_widgets(view_order_finish_screen * this);
 void view_order_finish_screen_language(view_order_finish_screen * this);
 void view_order_finish_screen_signals(view_order_finish_screen * this);
+void view_order_finish_screen_count_money_back(view_order_finish_screen * this);
+void view_order_finish_screen_convert_string_price(uint32_t source_register, c_string * buffer);
 void view_order_finish_screen_delete_digit_in_calculator_buffer(view_order_finish_screen * this);
 void view_order_finish_screen_append_digit_to_calculator_buffer(view_order_finish_screen * this, uint8_t  digit);
 void view_order_finish_screen_btn_print_bill_click_callback(GtkWidget * widget, gpointer param);
@@ -1007,7 +999,8 @@ void view_build_main_window(view * this)
 	gtk_window_set_title(GTK_WINDOW(this->window), CONF_WINDOW_TITLE);
 	gtk_window_set_position(GTK_WINDOW(this->window), GTK_WIN_POS_CENTER_ALWAYS);
 	gtk_window_fullscreen (GTK_WINDOW(this->window));
-	gtk_window_set_resizable(GTK_WINDOW(this->window), FALSE);
+	//gtk_window_set_decorated(GTK_WINDOW(this->window), FALSE);
+	//gtk_window_set_resizable(GTK_WINDOW(this->window), FALSE);
 
 	this->container = gtk_fixed_new();
 	gtk_container_add(GTK_CONTAINER(this->window), this->container);
@@ -1910,7 +1903,6 @@ view_order_finish_screen * view_order_finish_screen_new(view_base * view_base_re
 	this->money_back_buffer = c_string_new_with_init("0 Kč");
 
 	this->calculator_register = 0;
-	this->counter_money_register = 0;
 
 	this->base_screen_ref = view_base_screen_new(view_base_ref);
 
@@ -1952,7 +1944,7 @@ void view_order_finish_screen_build_widgets(view_order_finish_screen * this)
 	value_widget_set_right_padding(this->order_sum_price, 30);
 	value_widget_set_font_family(this->order_sum_price, "Arial");
 	value_widget_set_value(this->order_sum_price, this->order_price_buffer);
-	//value_widget_set_background_color(this->order_sum_price, bg_color_2);
+	value_widget_set_background_color(this->order_sum_price, bg_color_2);
 
 	this->customer_payed = value_widget_new(value_widget_geometry);
 	value_widget_set_font_size(this->customer_payed, 30);
@@ -1964,7 +1956,7 @@ void view_order_finish_screen_build_widgets(view_order_finish_screen * this)
 
 
 	this->count_money_back = value_widget_new(value_widget_geometry);
-	//value_widget_set_background_color(this->count_money_back, bg_color_2);
+	value_widget_set_background_color(this->count_money_back, bg_color_2);
 	value_widget_set_font_size(this->count_money_back, 30);
 	value_widget_set_left_padding(this->count_money_back, 30);
 	value_widget_set_right_padding(this->count_money_back, 30);
@@ -2085,6 +2077,18 @@ void view_order_finish_screen_pack_widgets(view_order_finish_screen * this)
 			view_base_recount_y_geometry_by_ratio(view_base_ref, 120));
 }
 
+void view_order_finish_screen_count_money_back(view_order_finish_screen * this)
+{
+	if(this->calculator_register > 0)
+	{
+		view_order_finish_screen_convert_string_price(this->calculator_register - 0, this->money_back_buffer);
+	}
+	else
+	{
+		view_order_finish_screen_convert_string_price(0, this->money_back_buffer);
+	}
+}
+
 void view_order_finish_screen_signals(view_order_finish_screen * this)
 {
 	g_signal_connect(G_OBJECT(this->btn_print_bill), 
@@ -2175,23 +2179,20 @@ void view_order_finish_screen_append_digit_to_calculator_buffer(view_order_finis
 	this->calculator_register = (this->calculator_register *10) + digit;
 	
 	view_order_finish_screen_convert_string_price(this->calculator_register, this->calculator_buffer);
+	view_order_finish_screen_count_money_back(this);
 
 	gtk_widget_queue_draw(GTK_WIDGET(this->customer_payed->draw_area));
 	gtk_widget_queue_draw(GTK_WIDGET(this->count_money_back->draw_area));
+
 }
 
 void view_order_finish_screen_delete_digit_in_calculator_buffer(view_order_finish_screen * this)
 {
-	this->calculator_register = (this->calculator_register / 10);
-
 	if(this->calculator_register > 0)
-	{
-		view_order_finish_screen_convert_string_price(this->calculator_register, this->calculator_buffer);
-	}
-	else
-	{
-		c_string_set_string(this->calculator_buffer, "0 Kč");
-	}
+		this->calculator_register = (this->calculator_register / 10);
+
+	view_order_finish_screen_convert_string_price(this->calculator_register, this->calculator_buffer);
+	view_order_finish_screen_count_money_back(this);
 
 	gtk_widget_queue_draw(GTK_WIDGET(this->customer_payed->draw_area));
 	gtk_widget_queue_draw(GTK_WIDGET(this->count_money_back->draw_area));
@@ -2219,6 +2220,8 @@ void view_order_finish_screen_button_matrix_0x0_click_callback(GtkWidget * widge
 {
 	c_string_set_string(((view_order_finish_screen*) param)->calculator_buffer, "0 Kč");
 	((view_order_finish_screen *) param)->calculator_register = 0;
+
+	view_order_finish_screen_count_money_back((view_order_finish_screen*) param);
 }
 
 void view_order_finish_screen_button_matrix_0x1_click_callback(GtkWidget * widget, gpointer param)
