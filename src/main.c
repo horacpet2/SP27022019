@@ -5,13 +5,14 @@
 #include <gtk/gtk.h>
 #include <string.h>
 #include <stdarg.h>
-
 #include <aclib.h>
+#include <assert.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
 #include <Winspool.h>
 #endif
+
 
 /********************* definice konstant *******************************/
 
@@ -33,6 +34,25 @@ enum _lang_index_description_
 	lang_cz = 0,
 
 	lang_num	
+};
+
+
+enum _error_index_
+{
+	error_index_database_connection = 0,
+	error_index_unknown_order_ID,
+	error_index_bill_print_error,
+	error_index_stock_quantity_update_error,
+
+	error_number
+};
+
+enum _warning_index_
+{
+	warning_index_unknown_position_in_order_list = 0,
+	warning_index_shortage_stock,
+
+	warning_number
 };
 
 
@@ -165,7 +185,11 @@ struct _alarm_buffer_
 	bool error;
 	bool warning;
 
+	bool * error_buffer;
+	bool * warning_buffer;
 
+	uint32_t error_buffer_size;
+	uint32_t warning_buffer_size;
 };
 
 struct _database_
@@ -275,6 +299,15 @@ struct _lang_
 	const char * lbl_customer_payed_text;
 	const char * lbl_order_sum_text;
 	const char * lbl_money_back_text;
+
+	const char * error_database_connection;
+	const char * error_unknown_order_ID;
+	const char * error_bill_print_error;
+	const char * error_stock_quantity_update_error;
+
+	const char * warning_unknown_position_in_order_list;
+	const char * warning_shortage_stock;
+
 };
 
 struct _view_bill_viewer_screen_
@@ -340,6 +373,15 @@ struct _alarm_widget_
 	GtkWidget * draw_area;
 
 	alarm_buffer * alarm_buffer_ref;
+	multi_lang * multi_lang_ref;
+
+	uint32_t font_size;
+	const char * font_family;
+
+	double left_padding;
+
+	uint32_t error_index;
+	uint32_t warning_index;
 
 	geometry widget_geometry;
 
@@ -406,8 +448,11 @@ void settings_finalize(settings * this);
 printer * printer_new();
 void printer_finalize(printer * this);
 
-alarm_buffer * alarm_buffer_new();
-void alarm_buffer_reset_error(alarm_buffer * this);
+alarm_buffer * alarm_buffer_new(uint32_t error_buffer_size, uint32_t warning_buffer_size);
+void alarm_buffer_runtime(alarm_buffer * this);
+void alarm_buffer_set_error(alarm_buffer * this, uint32_t error_index);
+void alarm_buffer_set_warning(alarm_buffer * this, uint32_t warning_index);
+void alarm_buffer_reset(alarm_buffer * this);
 void alarm_buffer_finalize(alarm_buffer * this);
 
 database * database_new();
@@ -426,27 +471,28 @@ order_item * order_item_new();
 void order_item_finalize(order_item * this);
 
 view * view_new(controler * controler_ref);
-gboolean view_cyclic_interupt(gpointer param);
-bool view_load_company_icon(view * this);
-GtkWidget * view_initialize_company_icon_widget(GdkPixbuf * icon, double window_width_ratio);
-void view_pack_container(view * this);
-void view_hide_cursor(view * this);
 void view_initialize(view * this);
-void view_build_main_window(view * this);
-void view_build_screens(view * this);
-void view_build_alarm_widget(view * this);
-void view_pack_screens(view * this);
-void view_initialize_base_class(view * this);
-void view_signals(view * this);
-void view_finalize(view * this);
-void view_window_exit_callback(GtkWidget * widget, gpointer param);
-void view_close_callback(GtkWidget * widget, GdkEventButton * event, gpointer * param);
+static gboolean view_cyclic_interupt(gpointer param);
+static bool view_load_company_icon(view * this);
+static GtkWidget * view_initialize_company_icon_widget(GdkPixbuf * icon, double window_width_ratio);
+static void view_pack_container(view * this);
+static void view_hide_cursor(view * this);
+static void view_build_main_window(view * this);
+static void view_build_screens(view * this);
+static void view_build_alarm_widget(view * this);
+static void view_pack_screens(view * this);
+static void view_initialize_base_class(view * this);
+static void view_signals(view * this);
+static void view_finalize(view * this);
+static void view_window_exit_callback(GtkWidget * widget, gpointer param);
+static void view_close_callback(GtkWidget * widget, GdkEventButton * event, gpointer * param);
 
 view_base * view_base_new(controler * controler_ref, geometry window_base_geomtry);
 void view_base_build_container(view_base * this);
 void view_base_set_current_window_geometry(view_base * this, geometry window_geometry);
 void view_base_read_current_screen_geometry(view_base * this);
 void view_base_show_order_screen(view_base * this);
+alarm_buffer * view_base_get_alarm_baffer_ref(view_base * this);
 void view_base_show_settings_screen(view_base * this);
 void view_base_show_order_finish_screen(view_base * this);
 void view_base_show_bill_viewer_screen(view_base * this);
@@ -468,6 +514,7 @@ multi_lang * multi_lang_new();
 lang * multi_lang_get_current_language(multi_lang * this);
 void multi_lang_initialize_language_structure(multi_lang * this);
 void multi_lang_initialize_czech_text(multi_lang * this);
+void multi_lang_set_common_text_czech(lang * this);
 void multi_lang_set_alarm_text_czech(lang * this);
 void multi_lang_set_order_screen_text_czech(lang * this);
 void multi_lang_set_manual_input_screen_text_czech(lang * this);
@@ -554,8 +601,14 @@ void view_order_finish_screen_button_matrix_3x1_click_callback(GtkWidget * widge
 void view_order_finish_screen_button_matrix_3x2_click_callback(GtkWidget * widget, gpointer param);
 void view_order_finish_screen_finalize(view_order_finish_screen * this);
 
-alarm_widget * alarm_widget_new(alarm_buffer * alarm_buffer_ref, geometry widget_geometry);
+alarm_widget * alarm_widget_new(view_base * view_base_ref, geometry widget_geometry);
 gboolean alarm_widget_draw_callback(GtkWidget * drawing_area, cairo_t * cr, gpointer param);
+const char * alarm_widget_get_error_text(alarm_widget * this);
+const char * alarm_widget_get_warning_text_by_index(alarm_widget * this);
+const char * alarm_widget_get_error_text_by_index(alarm_widget * this);
+void alarm_widget_set_font_size(alarm_widget * this, uint32_t font_size);
+void alarm_widget_set_font_family(alarm_widget * this, const char * font_family);
+void alarm_widget_set_left_padding(alarm_widget * this, double left_padding);
 void alarm_widget_reset_error_buffer_callback(GtkWidget * widget, GdkEventButton * event, gpointer param);
 void alarm_widget_build(alarm_widget * this);
 void alarm_widget_signals(alarm_widget * this);
@@ -624,7 +677,7 @@ void controler_build_sub_modules(controler * this)
 	this->settings_ref = settings_new();
 	this->user_management_ref = user_management_new();
 
-	this->alarm_buffer_ref = alarm_buffer_new();
+	this->alarm_buffer_ref = alarm_buffer_new(error_number, warning_number);
 }
 
 void controler_finalize(controler * this)
@@ -699,20 +752,65 @@ void printer_finalize(printer * this)
 
 
 /************************** modul alarm_buffer **************************/
-alarm_buffer * alarm_buffer_new()
+alarm_buffer * alarm_buffer_new(uint32_t error_buffer_size, uint32_t warning_buffer_size)
 {
 	alarm_buffer * this = (alarm_buffer*) malloc(sizeof(alarm_buffer));
 	
-	this->error = true;
+	this->error = false;
 	this->warning = false;
+
+	this->error_buffer = (bool*) malloc(sizeof(bool)*error_buffer_size);
+	this->warning_buffer = (bool*) malloc(sizeof(bool)*warning_buffer_size);
+	memset(this->error_buffer, false, error_buffer_size);
+	memset(this->warning_buffer, false, warning_buffer_size);
+
+	this->error_buffer[0] = true;
+	this->error_buffer[2] = true;
+
+	this->error_buffer_size = error_buffer_size;
+	this->warning_buffer_size = warning_buffer_size;
 
 	return this;
 }
 
-
-void alarm_buffer_reset_error(alarm_buffer * this)
+bool alarm_buffer_check_state(bool * buffer, uint32_t buffer_size)
 {
+	for(uint32_t i = i; i < buffer_size; i++)
+	{
+		if( buffer[i] == true)
+			return true;
 
+	}
+
+	return false;
+}
+
+void alarm_buffer_runtime(alarm_buffer * this)
+{
+	this->error = alarm_buffer_check_state(this->error_buffer, this->error_buffer_size);
+	this->warning = alarm_buffer_check_state(this->warning_buffer, this->warning_buffer_size);
+}
+
+void alarm_buffer_set_state(bool * buffer, uint32_t index, uint32_t buffer_size)
+{
+	if(index < buffer_size)
+		buffer[index] = true;
+}
+
+void alarm_buffer_set_error(alarm_buffer * this, uint32_t error_index)
+{
+	alarm_buffer_set_state(this->error_buffer, error_index, this->error_buffer_size);
+}
+
+void alarm_buffer_set_warning(alarm_buffer * this, uint32_t warning_index)
+{
+	alarm_buffer_set_state(this->warning_buffer, warning_index, this->warning_buffer_size);
+}
+
+void alarm_buffer_reset(alarm_buffer * this)
+{
+	memset(this->error_buffer, false, this->error_buffer_size);
+	memset(this->warning_buffer, false, this->warning_buffer_size);
 }
 
 void alarm_buffer_finalize(alarm_buffer * this)
@@ -833,6 +931,12 @@ void view_base_set_current_window_geometry(view_base * this, geometry window_geo
 {
 	this->window_geometry.width = window_geometry.width;
 	this->window_geometry.height = window_geometry.height;
+}
+
+
+alarm_buffer * view_base_get_alarm_baffer_ref(view_base * this)
+{
+	return this->controler_ref->alarm_buffer_ref;
 }
 
 void view_base_show_order_screen(view_base * this)
@@ -963,24 +1067,6 @@ view * view_new(controler * controler_ref)
 	return this;
 }
 
-
-gboolean view_cyclic_interupt(gpointer param)
-{
-	view * this = (view*) param;
-
-	gtk_widget_queue_draw(GTK_WIDGET(this->window));
-
-	return TRUE;
-}
-
-
-void view_hide_cursor(view * this)
-{
-	GdkCursor * cursor = gdk_cursor_new_for_display(gdk_display_get_default(), GDK_BLANK_CURSOR);
-	GdkWindow * win = gtk_widget_get_window((this->window));
-	gdk_window_set_cursor((win), cursor);
-}
-
 void view_initialize(view * this)
 {
 	view_base_show_order_screen(this->view_base_ref);
@@ -988,7 +1074,25 @@ void view_initialize(view * this)
 	//view_hide_cursor(this);
 }
 
-void view_build_main_window(view * this)
+static gboolean view_cyclic_interupt(gpointer param)
+{
+	view * this = (view*) param;
+
+	alarm_buffer_runtime(view_base_get_alarm_baffer_ref(this->view_base_ref));
+	gtk_widget_queue_draw(GTK_WIDGET(this->window));
+
+	return TRUE;
+}
+
+static void view_hide_cursor(view * this)
+{
+	GdkCursor * cursor = gdk_cursor_new_for_display(gdk_display_get_default(), GDK_BLANK_CURSOR);
+	GdkWindow * win = gtk_widget_get_window((this->window));
+	gdk_window_set_cursor((win), cursor);
+}
+
+
+static void view_build_main_window(view * this)
 {
 	this->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
@@ -999,14 +1103,17 @@ void view_build_main_window(view * this)
 	gtk_window_set_title(GTK_WINDOW(this->window), CONF_WINDOW_TITLE);
 	gtk_window_set_position(GTK_WINDOW(this->window), GTK_WIN_POS_CENTER_ALWAYS);
 	gtk_window_fullscreen (GTK_WINDOW(this->window));
-	//gtk_window_set_decorated(GTK_WINDOW(this->window), FALSE);
-	//gtk_window_set_resizable(GTK_WINDOW(this->window), FALSE);
+
+	GdkPixbuf * program_icon = view_base_load_image(CONF_COMPANY_ICON_PATH);
+
+	if(program_icon != NULL)
+		gtk_window_set_icon(GTK_WINDOW(this->window), program_icon);
 
 	this->container = gtk_fixed_new();
 	gtk_container_add(GTK_CONTAINER(this->window), this->container);
 }
 
-GtkWidget * view_initialize_company_icon_widget(GdkPixbuf * icon, double window_width_ratio)
+static GtkWidget * view_initialize_company_icon_widget(GdkPixbuf * icon, double window_width_ratio)
 {
 	GdkPixbuf * scale_icon = view_base_scale_icon(icon, x_axis, 150*window_width_ratio);
 
@@ -1022,13 +1129,14 @@ GtkWidget * view_initialize_company_icon_widget(GdkPixbuf * icon, double window_
 	return company_icon;
 }
 
-bool view_load_company_icon(view * this)
+static bool view_load_company_icon(view * this)
 {
 	GdkPixbuf * icon = view_base_load_image(CONF_COMPANY_ICON_PATH);
 
 	if(icon != NULL)
 	{
-		this->company_icon = view_initialize_company_icon_widget(icon, this->view_base_ref->window_width_ratio);
+		this->company_icon = view_initialize_company_icon_widget(icon, 
+							this->view_base_ref->window_width_ratio);
 		g_object_unref(icon);
 
 		return true;
@@ -1041,7 +1149,7 @@ bool view_load_company_icon(view * this)
 	}
 }
 
-void view_initialize_base_class(view * this)
+static void view_initialize_base_class(view * this)
 {
 	geometry window_base_geometry = {800, 600};
 
@@ -1050,7 +1158,7 @@ void view_initialize_base_class(view * this)
 						this->view_base_ref->screen_geometry);
 }
 
-void view_build_screens(view * this)
+static void view_build_screens(view * this)
 {
 	this->view_bill_viewer_screen_ref = view_bill_viewer_screen_new(this->view_base_ref);
 	this->view_order_screen_ref = view_order_screen_new(this->view_base_ref);
@@ -1059,17 +1167,19 @@ void view_build_screens(view * this)
 	this->view_order_finish_screen_ref = view_order_finish_screen_new(this->view_base_ref);
 }
 
-void view_build_alarm_widget(view * this)
+static void view_build_alarm_widget(view * this)
 {
 	geometry widget_geometry;
 	widget_geometry.width = this->view_base_ref->window_geometry.width;
 	widget_geometry.height = view_base_recount_y_geometry_by_ratio(this->view_base_ref, 25);
 
-	this->alarm_widget_ref = alarm_widget_new(this->view_base_ref->controler_ref->alarm_buffer_ref, widget_geometry);
-
+	this->alarm_widget_ref = alarm_widget_new(this->view_base_ref, widget_geometry);
+	alarm_widget_set_font_size(this->alarm_widget_ref, 20);
+	alarm_widget_set_font_family(this->alarm_widget_ref, "Arial");
+	alarm_widget_set_left_padding(this->alarm_widget_ref, view_base_recount_x_geometry_by_ratio(this->view_base_ref, 50));
 }
 
-void view_pack_screens(view * this)
+static void view_pack_screens(view * this)
 {
 	gtk_stack_add_named(GTK_STACK(this->view_base_ref->stack_container),
 				this->view_order_screen_ref->base_screen_ref->container,
@@ -1092,7 +1202,7 @@ void view_pack_screens(view * this)
 				"order_finish_screen");
 }
 
-void view_pack_container(view * this)
+static void view_pack_container(view * this)
 {
 	if(this->company_icon != NULL)
 	{
@@ -1115,7 +1225,7 @@ void view_pack_container(view * this)
 			view_base_recount_y_geometry_by_ratio(this->view_base_ref, 125));
 }  
 
-void view_signals(view * this)
+static void view_signals(view * this)
 {
 	g_signal_connect(G_OBJECT(this->window), 
 				"destroy", 
@@ -1136,7 +1246,7 @@ void view_signals(view * this)
 	alarm_widget_signals(this->alarm_widget_ref);
 }
 
-void view_finalize(view * this)
+static void view_finalize(view * this)
 {
 	view_bill_viewer_screen_finalize(this->view_bill_viewer_screen_ref);
 	view_order_screen_finalize(this->view_order_screen_ref);
@@ -1150,13 +1260,13 @@ void view_finalize(view * this)
 }
 
 
-void view_window_exit_callback(GtkWidget * widget, gpointer param)
+static void view_window_exit_callback(GtkWidget * widget, gpointer param)
 {
 	view * this = (view*) param;
 	view_finalize(this);
 }
 
-void view_close_callback(GtkWidget * widget, GdkEventButton * event, gpointer * param)
+static void view_close_callback(GtkWidget * widget, GdkEventButton * event, gpointer * param)
 {
 	view * this = (view*) param;
 
@@ -1243,6 +1353,7 @@ void multi_lang_initialize_czech_text(multi_lang * this)
 
 	lang_struct_cz->language_name = "Čeština";
 
+	multi_lang_set_common_text_czech(lang_struct_cz);
 	multi_lang_set_alarm_text_czech(lang_struct_cz);
 	multi_lang_set_order_screen_text_czech(lang_struct_cz);
 	multi_lang_set_manual_input_screen_text_czech(lang_struct_cz);
@@ -1251,9 +1362,22 @@ void multi_lang_initialize_czech_text(multi_lang * this)
 	multi_lang_set_bill_viewer_screen_text_czech(lang_struct_cz);
 }
 
+void multi_lang_set_common_text_czech(lang * this)
+{
+	this->currency_text = "Kč";
+	this->default_sum_price_text = "0.0 Kč";
+	this->btn_back_text = "Zpět";
+}
+
 void multi_lang_set_alarm_text_czech(lang * this)
 {
+	this->error_database_connection = "E1 Chyba spojení s databází";
+	this->error_unknown_order_ID = "E2 Neznámé ID objednávky";
+	this->error_bill_print_error = "E3 Tisk účtenky nebyl úspěšný";
+	this->error_stock_quantity_update_error = "E4 Chyba při aktualizaci skladových zásob";
 
+	this->warning_unknown_position_in_order_list = "W1 Neznámá pozice v objednávkovém seznamu";
+	this->warning_shortage_stock = "W2 Nedostatke skladových zásob";
 }
 
 void multi_lang_set_order_screen_text_czech(lang * this)
@@ -1264,8 +1388,6 @@ void multi_lang_set_order_screen_text_czech(lang * this)
 	this->btn_pay_text = "Zaplatit";
 	this->btn_manual_input_text = "Zadat ručně";
 	this->lbl_sum_text = "Celkem:";
-	this->currency_text = "Kč";
-	this->default_sum_price_text = "0.0 Kč";
 	this->order_list_widget_goods_text = "Zboží";
 	this->order_list_widget_quantity_text = "Množství";
 	this->order_list_widget_price_without_tax_text = "Cena bez DPH";
@@ -1275,7 +1397,6 @@ void multi_lang_set_order_screen_text_czech(lang * this)
 void multi_lang_set_manual_input_screen_text_czech(lang * this)
 {
 	this->btn_prev_text = "Předchozí";
-	this->btn_back_text = "Zpět";
 	this->btn_next_text = "Další";
 }
 
@@ -2288,59 +2409,140 @@ void view_order_finish_screen_finalize(view_order_finish_screen * this)
 
 /**************************** modul alarm_widget ****************************/
 
-alarm_widget * alarm_widget_new(alarm_buffer * alarm_buffer_ref, geometry widget_geometry)
+alarm_widget * alarm_widget_new(view_base * view_base_ref, geometry widget_geometry)
 {
 	alarm_widget * this = (alarm_widget *) malloc(sizeof(alarm_widget));
 
-	this->alarm_buffer_ref = alarm_buffer_ref;
+	this->alarm_buffer_ref = view_base_get_alarm_baffer_ref(view_base_ref);
+	this->multi_lang_ref = view_base_ref->multi_lang_ref;
 	this->widget_geometry.width = widget_geometry.width;
 	this->widget_geometry.height = widget_geometry.height;
 	this->blink = false;
+
+	this->font_size = 12;
+	this->font_family = NULL;
+	this->left_padding = 20;
+
+	this->error_index = 0;
+	this->warning_index = 0;
 
 	alarm_widget_build(this);
 
 	return this;
 }
 
+void alarm_widget_set_font_size(alarm_widget * this, uint32_t font_size)
+{
+	this->font_size = font_size;
+}
+
+void alarm_widget_set_font_family(alarm_widget * this, const char * font_family)
+{
+	this->font_family = font_family;
+}
+
+void alarm_widget_set_left_padding(alarm_widget * this, double left_padding)
+{
+	this->left_padding = left_padding;
+}
+
+const char * alarm_widget_get_error_text_by_index(alarm_widget * this)
+{
+	lang * cz_lang = multi_lang_get_current_language(this->multi_lang_ref);
+
+	if(this->error_index == 0)
+		return cz_lang->error_database_connection;
+	else if(this->error_index == 1)
+		return cz_lang->error_unknown_order_ID;
+	else if(this->error_index == 2)
+		return cz_lang->error_bill_print_error;
+	else if(this->error_index == 3)
+		return cz_lang->error_stock_quantity_update_error;
+	else
+		return "Unknown error state";
+}
+
+const char * alarm_widget_get_error_text(alarm_widget * this)
+{
+	const char * alarm_text = NULL;
+
+	do
+	{
+		this->error_index = (this->error_index) % this->alarm_buffer_ref->error_buffer_size;
+
+		if(this->alarm_buffer_ref->error_buffer[this->error_index] == true)
+		{
+			alarm_text = alarm_widget_get_error_text_by_index(this);
+
+			//this->error_index ++;
+
+			break;
+		}
+		//else
+		//{
+			this->error_index++;
+		//}
+	}
+	while(this->error_index < this->alarm_buffer_ref->error_buffer_size);
+
+	return alarm_text;
+}
+
+const char * alarm_widget_get_warning_text_by_index(alarm_widget * this)
+{
+	return "warning";
+}
+
 gboolean alarm_widget_draw_callback(GtkWidget * drawing_area, cairo_t * cr, gpointer param)
 {
 	alarm_widget * this = (alarm_widget*) param;
+	const char * alarm_text = NULL;
 
 	if(this->alarm_buffer_ref->error == true)
 	{
-		gtk_widget_set_visible(GTK_WIDGET(this->draw_area), TRUE);
-
 		if(this->blink == true)
 			cairo_set_source_rgb(cr, 1,0,0);
 		else
 			cairo_set_source_rgb(cr, 1,0.60,0.1);
 
+		alarm_text = alarm_widget_get_error_text(this);
+
 		this->blink = !this->blink;
 	}
 	else if(this->alarm_buffer_ref->warning == true)
 	{
-		gtk_widget_set_visible(GTK_WIDGET(this->draw_area), TRUE);
 		cairo_set_source_rgb(cr, 1,0.5,0.5);
+		alarm_text = alarm_widget_get_warning_text_by_index(this);
 	}
 	else
 	{
-		gtk_widget_set_visible(GTK_WIDGET(this->draw_area), FALSE);
+		cairo_set_source_rgb(cr, 0,0.5,0);
 	}
 
 	cairo_rectangle(cr, 0,0, this->widget_geometry.width, this->widget_geometry.height);
 
 	cairo_fill(cr);
 
-	/*
-	cairo_set_source_rgb(cr, 0.1, 0.1, 0.1);
-	cairo_set_font_size(cr, this->height/2);
-	cairo_select_font_face(cr, "Arial", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-	//cairo_move_to(cr, );
-	//cairo_show_text(cr, );
+	
+	if((alarm_text != NULL) && (this->alarm_buffer_ref->error == true || this->alarm_buffer_ref->warning == true))
+	{
+		cairo_text_extents_t extents;
 
-	cairo_stroke(cr);
-*/
-	return FALSE;
+		cairo_set_source_rgb(cr, 0.1, 0.1, 0.1);
+		cairo_set_font_size(cr, this->font_size);
+
+		if(this->font_family != NULL)
+			cairo_select_font_face(cr, this->font_family, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+		
+		cairo_text_extents(cr, alarm_text, &extents);
+
+		cairo_move_to(cr, this->left_padding, (this->widget_geometry.height+extents.height)/2);
+		cairo_show_text(cr, alarm_text);
+
+		cairo_stroke(cr);
+	}
+
+	return TRUE;
 }
 
 void alarm_widget_build(alarm_widget * this)
@@ -2368,7 +2570,7 @@ void alarm_widget_signals(alarm_widget * this)
 void alarm_widget_reset_error_buffer_callback(GtkWidget * widget, GdkEventButton * event, gpointer param)
 {
 	alarm_buffer * this = (alarm_buffer*) param;
-	alarm_buffer_reset_error(this);
+	alarm_buffer_reset(this);
 }
 
 void alarm_widget_finalize(alarm_widget * this)
@@ -2716,6 +2918,7 @@ gboolean order_list_widget_scroll_callback(GtkWidget * widget, GdkEvent * event,
 
 #if TEST == TRUE
 
+/*
 void assert(bool condition, char * comment, ...)
 {
 	if(condition == false)
@@ -2728,11 +2931,28 @@ void assert(bool condition, char * comment, ...)
 		va_end(params);
 	}
 }
+*/
+
+
+void alarm_buffer_check_state_test()
+{
+	uint32_t buffer_size = 20;
+	bool * buffer = (bool*) malloc(sizeof(bool)*buffer_size);
+	memset(buffer, false, buffer_size);
+	buffer[1] = true;
+
+	bool alarm = alarm_buffer_check_state(buffer, buffer_size);
+	
+	assert(alarm = true);
+
+	free(buffer);
+}
 
 void unit_test_runtime()
 {
-	test_case_view_base();
 	//assert(false, "komentař: %d+%d=%d", 1,2,3);
+	//
+	alarm_buffer_check_state_test();	
 }
 
 
