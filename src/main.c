@@ -7,6 +7,7 @@
 #include <stdarg.h>
 #include <time.h>
 #include <aclib.h>
+#include <libpq-fe.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
@@ -22,6 +23,8 @@
 #define CONF_WINDOW_TITLE "Pokladní systém"
 #define CONF_COMPANY_ICON_PATH "img/logo-mlyn-dubecko.png"
 #define CONF_CYCLIC_INTERUPT_INTERVAL 1000
+
+#define CONF_DB_CONNECTION ""
 
 enum _side_orientation_
 {
@@ -136,7 +139,6 @@ typedef struct _value_widget_ value_widget;
 struct _order_list_widget_;
 typedef struct _order_list_widget_ order_list_widget;
 
-
 struct _geometry_;
 typedef struct _geometry_ geometry;
 
@@ -204,7 +206,17 @@ struct _alarm_buffer_
 
 struct _database_
 {
+	c_string * connection;
+	
+	char * user_name;
+	char * password;
+	char * db_name;
+	char * tcp_port;
+	char * ip_address;
 
+	const char * current_stock;
+
+	PGconn * conn;
 };
 
 struct _order_list_
@@ -442,6 +454,8 @@ struct _order_list_widget_
 
 controler * controler_new();
 void controler_build_sub_modules(controler * this);
+void controler_create_database_connection(controler * this);
+bool controler_database_is_connected(controler * this);
 void controler_finalize(controler * this);
 
 user_management * user_management_new();
@@ -475,7 +489,24 @@ void alarm_buffer_finalize(alarm_buffer * this);
 static alarm_report * alarm_buffer_get_next_report(array_list * buffer, uint32_t * index);
 
 database * database_new();
+void database_set_current_stock(database * this, const char * current_stock);
+bool database_connect(database * this);
+void database_build_connection_string(database * this);
+void database_set_user_name(database * this, char * user_name);
+char * database_get_user_name(database * this);
+void database_set_password(database * this, char * password);
+char * database_get_password(database * this);
+void database_set_db_name(database * this, char * db_name);
+char * database_get_db_name(database * this);
+void database_set_ip_address(database * this, char * ip_address);
+char * database_get_ip_address(database * this);
+void database_set_tcp_port(database * this, char * tcp_port);
+char * database_get_tcp_port(database * this);
+void database_disconnect(database * this);
+bool database_is_connected(database * this);
 void database_finalize(database * this);
+
+static void database_initialize_connection_parameters(database * this);
 
 order_list * order_list_new();
 void order_list_add_new_item(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price);
@@ -491,6 +522,9 @@ void order_list_clean(order_list * this);
 order_item * order_list_find_order_by_ID(order_list * this, uint8_t ID);
 order_item * order_list_get_order_item_by_idex(order_list * this, uint8_t index);
 void order_list_finalize(order_list * this);
+static void order_list_decrement_item_quantity_if_not_null(order_list * this, uint32_t index);
+static void order_list_put_new_item_to_order_list(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price);
+static void order_list_remove_item_from_list_if_quantity_equal_zero(order_list * this, order_item * item, uint32_t index);
 
 order_service * order_service_new();
 void order_service_finalize(order_service * this);
@@ -506,8 +540,8 @@ uint32_t order_item_get_quantity(order_item * this);
 uint8_t order_item_get_ID(order_item * this);
 double order_item_get_total_price(order_item * this);
 void order_item_increase_quantity(order_item * this);
-void order_item_decrease_queantity(order_item * this);
-void order_item_finalize(order_item * this);
+void order_item_decrease_quantity(order_item * this);
+void order_item_finalize(void * this);
 
 view * view_new(controler * controler_ref);
 void view_initialize(view * this);
@@ -749,7 +783,7 @@ void tc_view();
 
 
 /************************* hlavní výkonné vlákno (main) ***********************/
-
+//superuser=postgrs password=asdf1234 port=5432
 int main(int argv, char ** argc)
 {
 #if TEST == FALSE
@@ -757,7 +791,7 @@ int main(int argv, char ** argc)
 	controler * controler_ref = NULL;
 	view * view_ref = NULL;
 
-	controler_ref = controler_new();
+    	controler_ref = controler_new();
 
 	if(controler_ref != NULL)
 	{	
@@ -802,14 +836,26 @@ void controler_build_sub_modules(controler * this)
 	this->eet_ref = eet_new();
 	this->printer_ref = printer_new();
 	this->order_list_ref = order_list_new();
-	this->database_ref = database_new();
 	this->settings_ref = settings_new();
+
+
+	controler_create_database_connection(this);
+
 	this->user_management_ref = user_management_new();
 
 	this->alarm_buffer_ref = alarm_buffer_new();
+}
 
-	alarm_buffer_set_warning(this->alarm_buffer_ref, 1, "toto je chyba");
-	alarm_buffer_set_warning(this->alarm_buffer_ref, 2, "toto je další chyba");
+
+bool controler_database_is_connected(controler * this)
+{
+	return database_is_connected(this->database_ref);
+}
+
+void controler_create_database_connection(controler * this)
+{
+	this->database_ref = database_new();
+	database_connect(this->database_ref);
 }
 
 void controler_finalize(controler * this)
@@ -1011,11 +1057,127 @@ database * database_new()
 {
 	database * this = (database*) malloc(sizeof(database));
 
+	database_initialize_connection_parameters(this);
+	this->connection = c_string_new_with_init("dbname=stock user=postgres password=asdf1234 hostaddr=127.0.0.1 port=5432");
+	this->current_stock = NULL;
+
 	return this;
+}
+
+static void database_initialize_connection_parameters(database * this)
+{
+	this->user_name = NULL;
+	this->password = NULL;
+	this->db_name = NULL;
+	this->tcp_port = NULL;
+	this->ip_address = NULL;
+}
+
+void database_build_connection_string(database * this)
+{
+	c_string_set_string(this->connection, "dbname=");
+	c_string_concat(this->connection, this->db_name);
+	c_string_concat(this->connection, " user=");
+	c_string_concat(this->connection, this->user_name);
+	c_string_concat(this->connection, " password=");
+	c_string_concat(this->connection, this->password);
+	c_string_concat(this->connection, " hostaddr=");
+	c_string_concat(this->connection, this->ip_address);
+	c_string_concat(this->connection, " port=");
+	c_string_concat(this->connection, this->tcp_port);
+}
+
+void database_set_user_name(database * this, char * user_name)
+{
+	if(database_is_connected(this) == false)
+		this->user_name = user_name;
+}
+
+char * database_get_user_name(database * this)
+{
+	return this->user_name;
+}
+
+void database_set_password(database * this, char * password)
+{
+	if(database_is_connected(this) == false)
+		this->password = password;
+}
+
+char * database_get_password(database * this)
+{
+	return this->password;
+}
+
+void database_set_db_name(database * this, char * db_name)
+{
+	if(database_is_connected(this) == false)
+		this->db_name = db_name;
+}
+
+char * database_get_db_name(database * this)
+{
+	return this->db_name;
+}
+
+void database_set_ip_address(database * this, char * ip_address)
+{
+	if(database_is_connected(this) == false)
+		this->ip_address = ip_address;
+}
+
+char * database_get_ip_address(database * this)
+{
+	return this->ip_address;
+}
+
+void database_set_tcp_port(database * this, char * tcp_port)
+{
+	if(database_is_connected(this) == false)
+		this->tcp_port = tcp_port;
+}
+
+char * database_get_tcp_port(database * this)
+{
+	return this->tcp_port;
+}
+
+void database_set_current_stock(database * this, const char * current_stock)
+{
+	this->current_stock = current_stock;
+}
+
+bool database_connect(database * this)
+{
+	if(database_is_connected(this) == false)
+	{
+		this->conn = PQconnectdb(c_string_get_char_array(this->connection));
+
+		return database_is_connected(this);
+	}
+	else
+	{
+		return false;
+	}
+}
+
+void database_disconnect(database * this)
+{
+	if(database_is_connected(this) == true)
+		PQfinish(this->conn);
+}
+
+bool database_is_connected(database * this)
+{
+ 	if (PQstatus(this->conn) == CONNECTION_BAD) 
+		return false;
+	else
+		return true;
 }
 
 void database_finalize(database * this)
 {
+	database_disconnect(this);
 	free(this);
 }
 
@@ -1034,7 +1196,16 @@ order_list * order_list_new()
 
 void order_list_add_new_item(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price)
 {
+	order_item * item = NULL;
 
+	if((item = order_list_find_order_by_ID(this, ID)) == NULL)
+	{
+		order_list_put_new_item_to_order_list(this, ID, item_name, item_shortcut_name, price);
+	}
+	else
+	{
+		order_item_increase_quantity(item);
+	}
 }
 
 void order_list_increment_item_quantity_by_ID(order_list * this, uint8_t ID)
@@ -1049,12 +1220,40 @@ void order_list_increment_item_quantity_by_index(order_list * this, uint32_t ind
 
 void order_list_decrement_item_quantity_by_ID(order_list * this, uint8_t ID)
 {
+	//order_item * item = order_list_find_order_by_ID(this, ID);
 
+	
 }
 
 void order_list_decrement_item_quantity_by_index(order_list * this, uint32_t index)
 {
+	if(index < array_list_size(this->list))
+		order_list_decrement_item_quantity_if_not_null(this, index);
+}
 
+static void order_list_decrement_item_quantity_if_not_null(order_list * this, uint32_t index)
+{
+	order_item * item = array_list_get(this->list, index);
+
+	if(item != NULL)
+	{
+		order_item_decrease_quantity(item);	
+		order_list_remove_item_from_list_if_quantity_equal_zero(this, item, index);
+	}
+}
+
+static void order_list_remove_item_from_list_if_quantity_equal_zero(order_list * this, order_item * item, uint32_t index)
+{	
+	if(order_item_get_quantity(item) == 0)
+	{
+		array_list_remove_with_release(this->list, index, order_item_finalize);
+	}
+}
+
+static void order_list_put_new_item_to_order_list(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price)
+{
+	order_item * item = order_item_new(ID, item_name, item_shortcut_name, price);
+	array_list_add(this->list, item);
 }
 
 uint32_t order_list_size(order_list * this)
@@ -1077,21 +1276,36 @@ double order_list_get_total_price(order_list * this)
 
 void order_list_remove_by_ID(order_list * this, uint8_t ID)
 {
-
+	for(int i = 0; i < array_list_size(this->list); i++)
+	{
+		if(order_item_get_ID(array_list_get(this->list, i)) == ID)
+		{
+			array_list_remove_with_release(this->list, i, order_item_finalize);
+			return;
+		}
+	}
 }
 
 void order_list_remove_by_index(order_list * this, uint32_t index)
 {
-
+	array_list_remove_with_release(this->list, index, order_item_finalize);
 }
 
 void order_list_clean(order_list * this)
 {
-
+	array_list_clear_with_release(this->list, order_item_finalize);
 }
 
 order_item * order_list_find_order_by_ID(order_list * this, uint8_t ID)
 {
+	for(int i = 0; i < array_list_size(this->list); i ++)
+	{
+		order_item * item = array_list_get(this->list, i);
+		
+		if(order_item_get_ID(item) == ID)
+			return item;
+	}	
+
 	return NULL;
 }
 
@@ -1193,13 +1407,13 @@ void order_item_increase_quantity(order_item * this)
 	this->quantity ++;
 }
 
-void order_item_decrease_queantity(order_item * this)
+void order_item_decrease_quantity(order_item * this)
 {
 	if(this->quantity > 0)
 		this->quantity --;
 }
 
-void order_item_finalize(order_item * this)
+void order_item_finalize(void * this)
 {
 	free(this);
 }
@@ -1388,6 +1602,12 @@ static gboolean view_cyclic_interupt(gpointer param)
 	view * this = (view*) param;
 
 	gtk_widget_queue_draw(GTK_WIDGET(this->window));
+
+	if(controler_database_is_connected(this->controler_ref) == false)
+	{
+		lang * cz_lang = multi_lang_get_current_language(this->view_base_ref->multi_lang_ref);
+		alarm_buffer_set_error(view_base_get_alarm_baffer_ref(this->view_base_ref), 1, cz_lang->error_database_connection);
+	}
 
 	return TRUE;
 }
