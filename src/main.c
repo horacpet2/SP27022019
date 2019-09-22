@@ -124,6 +124,9 @@ typedef struct _view_order_screen_ view_order_screen;
 struct _view_manual_input_screen_;
 typedef struct _view_manual_input_screen_ view_manual_input_screen;
 
+struct _settings_parameter_;
+typedef struct _settings_parameter_ settings_parameter;
+
 struct _view_settings_screen_;
 typedef struct _view_settings_screen_ view_settings_screen;
 
@@ -351,8 +354,8 @@ struct _view_order_screen_
 	GtkWidget * btn_pay;
 	GtkWidget * btn_manual_input;
 
-	GtkWidget * lbl_order_sum;
-	GtkWidget * lbl_sum_price;
+	value_widget * order_sum_price;
+	c_string * price_buffer;
 };
 
 struct _view_manual_input_screen_
@@ -365,10 +368,21 @@ struct _view_manual_input_screen_
 	GtkWidget * btn_back;
 };
 
+
+struct _settings_parameter_
+{
+	GtkWidget * container;
+	GtkWidget * label;
+	GtkWidget * entry;
+};
+
 struct _view_settings_screen_
 {
 	view_base_screen * base_screen_ref;
 
+	settings_parameter ** parameter_array;
+	
+	GtkWidget * btn_back;
 };
 
 struct _view_order_finish_screen_
@@ -505,7 +519,6 @@ char * database_get_tcp_port(database * this);
 void database_disconnect(database * this);
 bool database_is_connected(database * this);
 void database_finalize(database * this);
-
 static void database_initialize_connection_parameters(database * this);
 
 order_list * order_list_new();
@@ -640,6 +653,15 @@ void view_manual_input_screen_button_metrix_2x2_clicked_callback(GtkWidget * wid
 void view_manual_input_screen_button_metrix_2x3_clicked_callback(GtkWidget * widget, gpointer param);
 void view_manual_input_screen_button_metrix_2x4_clicked_callback(GtkWidget * widget, gpointer param);
 void view_manual_input_screen_finalize(view_manual_input_screen * this);
+
+
+settings_parameter * settings_parameter_new(geometry widget_geometry, GtkWidget * entry, double pos_label, double pos_entry);
+void settings_parametr_set_label(settings_parameter * this, const char * label);
+void settings_parameter_set_entry(settings_parameter * this, GtkWidget * entry);
+GtkWidget * settings_parameter_get_container(settings_parameter * this);
+GtkWidget * settings_parameter_get_entry(settings_parameter * this);
+static void settings_parameter_build_widgets(settings_parameter * this, geometry widget_geometry, GtkWidget * entry);
+static void settings_parameter_pack_widgets(settings_parameter * this, double pos_left, double pos_right);
 
 view_settings_screen * view_settings_screen_new(view_base * view_base_ref);
 void view_settings_screen_build_widgets(view_settings_screen * this);
@@ -2022,6 +2044,8 @@ view_order_screen * view_order_screen_new(view_base * view_base_ref)
 
 	this->base_screen_ref = view_base_screen_new(view_base_ref);
 
+	this->price_buffer = c_string_new();
+
 	view_order_screen_build_widgets(this);
 	view_order_screen_language(this);
 	view_order_screen_pack_widgets(this);
@@ -2058,15 +2082,22 @@ void view_order_screen_build_widgets(view_order_screen * this)
 	this->btn_pay = view_base_screen_build_button(this->base_screen_ref, button_width_long, widget_height);
 	this->btn_manual_input = view_base_screen_build_button(this->base_screen_ref, button_width_long, widget_height);
 
-	this->lbl_order_sum = view_base_screen_build_label(this->base_screen_ref, 
-							100,
-							widget_height, 
-							0);
 
-	this->lbl_sum_price = view_base_screen_build_label(this->base_screen_ref,
-								200,
-								widget_height, 
-								1);
+	geometry widget_geometry;
+	widget_geometry.width = view_base_recount_x_geometry_by_ratio(this->base_screen_ref->view_base_ref, this->base_screen_ref->view_base_ref->window_base_geometry.width-100);
+	widget_geometry.height = view_base_recount_y_geometry_by_ratio(this->base_screen_ref->view_base_ref, 35);
+
+	
+	double bg_color[3] = {0.91, 0.91, 0.91};
+
+	this->order_sum_price = value_widget_new(widget_geometry);
+	value_widget_set_background_color(this->order_sum_price, bg_color);
+	value_widget_set_font_size(this->order_sum_price, 35);
+	value_widget_set_left_padding(this->order_sum_price, 30);
+	value_widget_set_right_padding(this->order_sum_price, 30);
+	value_widget_set_font_family(this->order_sum_price, "Arial");
+	value_widget_set_value(this->order_sum_price, this->price_buffer);
+
 }
 
 void view_order_screen_language(view_order_screen * this)
@@ -2089,8 +2120,8 @@ void view_order_screen_language(view_order_screen * this)
 	btn_label = gtk_bin_get_child(GTK_BIN(this->btn_manual_input));
 	view_base_screen_set_label_markup_text(btn_label, cz_lang->btn_manual_input_text, 20);
 
-	view_base_screen_set_label_markup_text(this->lbl_order_sum, cz_lang->lbl_sum_text, 20);
-	view_base_screen_set_label_markup_text(this->lbl_sum_price, cz_lang->default_sum_price_text, 20);
+	value_widget_set_label(this->order_sum_price, cz_lang->lbl_sum_text);
+	c_string_set_string(this->price_buffer, (char*) cz_lang->default_sum_price_text);
 
 
 	order_list_widget_add_column(this->list_widget, cz_lang->order_list_widget_goods_text);
@@ -2136,15 +2167,9 @@ void view_order_screen_pack_widgets(view_order_screen * this)
 			buttons_line_position);
 
 	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
-			this->lbl_order_sum, 
+			this->order_sum_price->draw_area, 
 			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
 			labels_line_position);
-
-	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
-			this->lbl_sum_price, 
-			view_base_recount_x_geometry_by_ratio(view_base_ref, window_base_geometry.width-250),
-			labels_line_position);
-
 	
 	gtk_fixed_put(GTK_FIXED(this->base_screen_ref->container), 
 			this->list_widget->draw_area,
@@ -2498,6 +2523,50 @@ void view_manual_input_screen_finalize(view_manual_input_screen * this)
 	view_base_screen_finalize(this->base_screen_ref);
 
 	free(this);
+}
+
+/**************************** modul settings_parameter ****************************/
+
+settings_parameter * settings_parameter_new(geometry widget_geometry, GtkWidget * entry, double pos_label, double pos_entry)
+{
+	settings_parameter * this = (settings_parameter *) malloc(sizeof(settings_parameter));
+
+	settings_parameter_build_widgets(this, widget_geometry, entry);	
+	settings_parameter_pack_widgets(this, pos_label, pos_entry);
+
+	return this; 
+}
+
+static void settings_parameter_build_widgets(settings_parameter * this, geometry widget_geometry, GtkWidget * entry)
+{
+	this->container = gtk_fixed_new();
+	gtk_widget_set_size_request(GTK_WIDGET(this->container), widget_geometry.width, widget_geometry.height);
+
+	this->label = gtk_label_new(NULL);
+	gtk_widget_set_size_request(GTK_WIDGET(this->label), widget_geometry.width/4, widget_geometry.height);
+
+	this->entry = entry;
+}
+
+static void settings_parameter_pack_widgets(settings_parameter * this, double pos_left, double pos_right)
+{
+	gtk_fixed_put(GTK_FIXED(this->container), this->label, pos_left, 0);
+	gtk_fixed_put(GTK_FIXED(this->container), this->entry, pos_right, 0);
+}
+
+void settings_parameter_set_label(settings_parameter * this, const char * label_text)
+{
+	gtk_label_set_markup(GTK_LABEL(this->label), label_text);
+}
+
+GtkWidget * settings_parameter_get_container(settings_parameter * this)
+{
+	return this->container;
+}
+
+GtkWidget * settings_parameter_get_entry(settings_parameter * this)
+{
+	return this->entry;
 }
 
 

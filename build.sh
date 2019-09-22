@@ -4,7 +4,7 @@ MAIN="src/main.c"
 
 OUTFILE="build/md_cash_desk"
 CC="gcc "
-LIBS="$(pkg-config --cflags --libs gtk+-3.0) -lm -L$HOME/lib/ -laclib -I$HOME/lib/include"
+LIBS="$(pkg-config --cflags --libs gtk+-3.0) -lm -L$(pg_config --libdir) -I$(pg_config --includedir) -lpq -L$HOME/lib/ -laclib -I$HOME/lib/include"
 MODULES="$MAIN"
 
 
