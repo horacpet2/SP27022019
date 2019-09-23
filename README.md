@@ -25,11 +25,11 @@ DATABASE -------|
 		|
 		|
 		|
-		|-------STOCK -----STOCK_CLIENT 1
-			      |
-			      |----STOCK_CLIENT 2
-			      |
-			      |----STOCK_CLIENT 3
+		|------- STOCK -----STOCK_CLIENT 1
+			       |
+			       |----STOCK_CLIENT 2
+			       |
+			       |----STOCK_CLIENT 3
 
 
 
@@ -50,6 +50,27 @@ Rezervované IP adresy:
 
 Pokladna: 192.168.1.10
 Správa skladu (databáze): 192.168.1.11
+
+
+Databáze je rozdělená na databázové tabulky:
+
+- stockList - seznam virtuálních skladů
+- XXX - virtuální sklad který obsahuje produkty
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

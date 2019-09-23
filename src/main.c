@@ -246,6 +246,7 @@ struct _order_item_
 	char * item_shortcut_name;
 	double item_price;
 	uint32_t quantity;
+	double tax;
 };
 
 struct _view_
@@ -366,6 +367,8 @@ struct _view_manual_input_screen_
 	GtkWidget * btn_next;
 	GtkWidget * btn_prev;
 	GtkWidget * btn_back;
+
+	uint8_t page_index;
 };
 
 
@@ -467,10 +470,20 @@ struct _order_list_widget_
 /***************** deklarace funkcí **********************************/
 
 controler * controler_new();
-void controler_build_sub_modules(controler * this);
-void controler_create_database_connection(controler * this);
-bool controler_database_is_connected(controler * this);
-void controler_finalize(controler * this);
+uint32_t controler_get_item_number_in_stock(controler * this);
+char * controler_get_item_name_by_ID(controler * this, uint8_t ID);
+void controler_add_item(controler * this, uint8_t ID);
+double controler_get_order_total_price_with_tax(controler * this);
+double controler_get_order_total_price_without_tax(controler * this);
+uint32_t controler_get_order_list_size(controler * this);
+char * controler_get_order_item_name_at_index(controler * this, uint32_t index);
+uint32_t controler_get_order_item_quantity_at_index(controler * this, uint32_t index);
+double controler_get_order_item_price_withou_tax_at_index(controler * this, uint32_t index);
+double controler_get_order_item_price_with_tax_at_index(controler * this, uint32_t index);
+static void controler_create_database_connection(controler * this);
+static void controler_build_sub_modules(controler * this);
+static bool controler_database_is_connected(controler * this);
+static void controler_finalize(controler * this);
 
 user_management * user_management_new();
 void user_management_finalize(user_management * this);
@@ -522,21 +535,26 @@ void database_finalize(database * this);
 static void database_initialize_connection_parameters(database * this);
 
 order_list * order_list_new();
-void order_list_add_new_item(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price);
+void order_list_add_new_item(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price, double tax);
 void order_list_increment_item_quantity_by_ID(order_list * this, uint8_t ID);
 void order_list_increment_item_quantity_by_index(order_list * this, uint32_t index);
 void order_list_decrement_item_quantity_by_ID(order_list * this, uint8_t ID);
 void order_list_decrement_item_quantity_by_index(order_list * this, uint32_t index);
 uint32_t order_list_size(order_list * this);
-double order_list_get_total_price(order_list * this);
+double order_list_get_total_price_without_tax(order_list * this);
+double order_list_get_total_price_with_tax(order_list * this);
 void order_list_remove_by_ID(order_list * this, uint8_t ID);
 void order_list_remove_by_index(order_list * this, uint32_t index);
 void order_list_clean(order_list * this);
+char * order_list_get_order_item_name_at_index(order_list * this, uint32_t index);
+uint32_t order_list_get_order_item_quantity_at_index(order_list * this, uint32_t index);
+double order_list_get_order_item_price_withou_tax_at_index(order_list * this, uint32_t index);
+double order_list_get_order_item_price_with_tax_at_index(order_list * this, uint32_t index);
 order_item * order_list_find_order_by_ID(order_list * this, uint8_t ID);
-order_item * order_list_get_order_item_by_idex(order_list * this, uint8_t index);
+order_item * order_list_get_order_item_by_index(order_list * this, uint8_t index);
 void order_list_finalize(order_list * this);
 static void order_list_decrement_item_quantity_if_not_null(order_list * this, uint32_t index);
-static void order_list_put_new_item_to_order_list(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price);
+static void order_list_put_new_item_to_order_list(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price, double tax);
 static void order_list_remove_item_from_list_if_quantity_equal_zero(order_list * this, order_item * item, uint32_t index);
 
 order_service * order_service_new();
@@ -545,13 +563,14 @@ void order_service_finalize(order_service * this);
 hand_scanner * hand_scanner_new();
 void hand_scanner_finalize(hand_scanner * this);
 
-order_item * order_item_new(uint8_t ID, char * item_name, char * item_shortcut_name, double item_price);
+order_item * order_item_new(uint8_t ID, char * item_name, char * item_shortcut_name, double item_price, double tax);
 char * order_item_get_name(order_item * this);
 char * order_item_get_shortcut_name(order_item * this);
 double order_item_get_price(order_item * this);
 uint32_t order_item_get_quantity(order_item * this);
 uint8_t order_item_get_ID(order_item * this);
-double order_item_get_total_price(order_item * this);
+double order_item_get_total_price_without_tax(order_item * this);
+double order_item_get_total_price_with_tax(order_item * this);
 void order_item_increase_quantity(order_item * this);
 void order_item_decrease_quantity(order_item * this);
 void order_item_finalize(void * this);
@@ -578,6 +597,7 @@ void view_base_build_container(view_base * this);
 void view_base_set_current_window_geometry(view_base * this, geometry window_geometry);
 void view_base_read_current_screen_geometry(view_base * this);
 void view_base_show_order_screen(view_base * this);
+controler * view_base_get_controler_reference(view_base * this);
 alarm_buffer * view_base_get_alarm_baffer_ref(view_base * this);
 void view_base_show_settings_screen(view_base * this);
 void view_base_show_order_finish_screen(view_base * this);
@@ -593,6 +613,7 @@ void view_base_finalize(view_base * this);
 view_base_screen * view_base_screen_new(view_base * view_base_ref);
 GtkWidget * view_base_screen_build_button(view_base_screen * this, double width, double height);
 GtkWidget * view_base_screen_build_label(view_base_screen * this, double width, double height, float xalign);
+controler * view_base_screen_get_controler_reference(view_base_screen * this);
 void view_base_screen_set_label_markup_text(GtkWidget * label, const char * string, int font_size);
 void view_base_screen_finalize(view_base_screen * this);
 
@@ -630,29 +651,30 @@ void view_order_screen_btn_clear_order_click_callback(GtkWidget * widget, gpoint
 void view_order_screen_finalize(view_order_screen * this);
 
 view_manual_input_screen * view_manual_input_screen_new(view_base * view_base_ref);
-void view_manual_input_screen_build_widgets(view_manual_input_screen * this);
-void view_manual_input_screen_language(view_manual_input_screen * this);
-void view_manual_input_screen_pack_widgets(view_manual_input_screen * this);
-void view_manual_input_screen_signals(view_manual_input_screen * this);
-void view_manual_input_screen_btn_prev_click_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_btn_back_click_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_btn_next_click_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_0x0_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_0x1_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_0x2_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_0x3_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_0x4_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_1x0_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_1x1_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_1x2_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_1x3_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_1x4_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_2x0_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_2x1_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_2x2_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_2x3_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_button_metrix_2x4_clicked_callback(GtkWidget * widget, gpointer param);
-void view_manual_input_screen_finalize(view_manual_input_screen * this);
+void view_manual_input_screen_fill(view_manual_input_screen * this);
+static void view_manual_input_screen_build_widgets(view_manual_input_screen * this);
+static void view_manual_input_screen_language(view_manual_input_screen * this);
+static void view_manual_input_screen_pack_widgets(view_manual_input_screen * this);
+static void view_manual_input_screen_signals(view_manual_input_screen * this);
+static void view_manual_input_screen_btn_prev_click_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_btn_back_click_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_btn_next_click_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_0x0_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_0x1_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_0x2_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_0x3_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_0x4_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_1x0_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_1x1_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_1x2_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_1x3_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_1x4_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_2x0_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_2x1_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_2x2_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_2x3_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_button_metrix_2x4_clicked_callback(GtkWidget * widget, gpointer param);
+static void view_manual_input_screen_finalize(view_manual_input_screen * this);
 
 
 settings_parameter * settings_parameter_new(geometry widget_geometry, GtkWidget * entry, double pos_label, double pos_entry);
@@ -860,7 +882,6 @@ void controler_build_sub_modules(controler * this)
 	this->order_list_ref = order_list_new();
 	this->settings_ref = settings_new();
 
-
 	controler_create_database_connection(this);
 
 	this->user_management_ref = user_management_new();
@@ -874,13 +895,112 @@ bool controler_database_is_connected(controler * this)
 	return database_is_connected(this->database_ref);
 }
 
-void controler_create_database_connection(controler * this)
+uint32_t controler_get_item_number_in_stock(controler * this)
+{
+	return 20;
+}
+
+void controler_add_item(controler * this, uint8_t ID)
+{
+
+}	
+
+double controler_get_order_total_price_with_tax(controler * this)
+{
+	return order_list_get_total_price_with_tax(this->order_list_ref);
+}
+
+double controler_get_order_total_price_without_tax(controler * this)
+{
+	return order_list_get_total_price_without_tax(this->order_list_ref);
+}
+
+uint32_t controler_get_order_list_size(controler * this)
+{
+	return order_list_size(this->order_list_ref);
+}
+
+char * controler_get_order_item_name_at_index(controler * this, uint32_t index)
+{
+	return order_list_get_order_item_name_at_index(this->order_list_ref, index);
+}
+
+uint32_t controler_get_order_item_quantity_at_index(controler * this, uint32_t index)
+{
+	return order_list_get_order_item_quantity_at_index(this->order_list_ref, index);
+}
+
+double controler_get_order_item_price_withou_tax_at_index(controler * this, uint32_t index)
+{
+	return order_list_get_order_item_price_withou_tax_at_index(this->order_list_ref, index);
+}
+
+double controler_get_order_item_price_with_tax_at_index(controler * this, uint32_t index)
+{
+	return order_list_get_order_item_price_with_tax_at_index(this->order_list_ref, index);
+}
+
+char * controler_get_item_name_by_ID(controler * this, uint8_t ID)
+{
+	switch(ID)
+	{
+		case 1:
+			return "mouka 1";
+		case 2: 
+			return "mouka 2";
+		case 3: 
+			return "mouka 3";
+		case 4:
+			return "mouka 4";
+		case 5:
+			return "mouka 5";
+		case 6:
+			return "mouka 6";
+		case 7:
+			return "mouka 7";
+		case 8:
+			return "mouka 8";
+		case 9:
+			return "mouka 9";
+		case 10:
+			return "mouka 10";
+		case 11: 
+			return "mouka 11";
+		case 12: 
+			return "mouka 12";
+		case 13:
+			return "mouka 13";
+		case 14:
+			return "mouka 14";
+		case 15:
+			return "mouka 15";
+		case 16:
+			return "mouka 16";
+		case 17:
+			return "mouka 17";
+		case 18:
+			return "mouka 18";
+		case 19:
+			return "mouka 19";
+		case 20:
+			return "mouka 20";
+		default:
+			return "";
+
+
+	}
+}
+
+
+static void controler_create_database_connection(controler * this)
 {
 	this->database_ref = database_new();
 	database_connect(this->database_ref);
 }
 
-void controler_finalize(controler * this)
+
+
+static void controler_finalize(controler * this)
 {
 	eet_finalize(this->eet_ref);
 	printer_finalize(this->printer_ref);
@@ -1215,14 +1335,13 @@ order_list * order_list_new()
 	return this;
 }
 
-
-void order_list_add_new_item(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price)
+void order_list_add_new_item(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price, double tax)
 {
 	order_item * item = NULL;
 
 	if((item = order_list_find_order_by_ID(this, ID)) == NULL)
 	{
-		order_list_put_new_item_to_order_list(this, ID, item_name, item_shortcut_name, price);
+		order_list_put_new_item_to_order_list(this, ID, item_name, item_shortcut_name, price, tax);
 	}
 	else
 	{
@@ -1272,9 +1391,9 @@ static void order_list_remove_item_from_list_if_quantity_equal_zero(order_list *
 	}
 }
 
-static void order_list_put_new_item_to_order_list(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price)
+static void order_list_put_new_item_to_order_list(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price, double tax)
 {
-	order_item * item = order_item_new(ID, item_name, item_shortcut_name, price);
+	order_item * item = order_item_new(ID, item_name, item_shortcut_name, price, tax);
 	array_list_add(this->list, item);
 }
 
@@ -1283,14 +1402,28 @@ uint32_t order_list_size(order_list * this)
 	return array_list_size(this->list);
 }
 
-double order_list_get_total_price(order_list * this)
+double order_list_get_total_price_without_tax(order_list * this)
 {
 	double total_price = 0;
 
 	for(int i = 0; i < array_list_size(this->list); i++)
 	{
 		order_item * item = array_list_get(this->list, i);
-		total_price += order_item_get_total_price(item);
+		total_price += order_item_get_total_price_without_tax(item);
+	}
+
+	return total_price;
+}
+
+
+double order_list_get_total_price_with_tax(order_list * this)
+{
+	double total_price = 0;
+
+	for(int i = 0; i < array_list_size(this->list); i++)
+	{
+		order_item * item = array_list_get(this->list, i);
+		total_price += order_item_get_total_price_with_tax(item);
 	}
 
 	return total_price;
@@ -1318,6 +1451,47 @@ void order_list_clean(order_list * this)
 	array_list_clear_with_release(this->list, order_item_finalize);
 }
 
+char * order_list_get_order_item_name_at_index(order_list * this, uint32_t index)
+{
+	order_item * item = order_list_get_order_item_by_index(this, index);
+
+	if(item != NULL)
+		return order_item_get_name(item);
+	else
+		return NULL;
+}
+
+uint32_t order_list_get_order_item_quantity_at_index(order_list * this, uint32_t index)
+{
+	order_item * item = order_list_get_order_item_by_index(this, index);
+
+	if(item != NULL)
+		return order_item_get_quantity(item);
+	else
+		return 0;
+}
+
+double order_list_get_order_item_price_withou_tax_at_index(order_list * this, uint32_t index)
+{
+	order_item * item = order_list_get_order_item_by_index(this, index);
+
+	if(item != NULL)
+		return order_item_get_total_price_without_tax(item);
+	else
+		return 0;
+}
+
+double order_list_get_order_item_price_with_tax_at_index(order_list * this, uint32_t index)
+{
+	order_item * item = order_list_get_order_item_by_index(this, index);
+
+	if(item != NULL)
+		return (order_item_get_total_price_with_tax(item));
+	else
+		return 0;
+
+}
+
 order_item * order_list_find_order_by_ID(order_list * this, uint8_t ID)
 {
 	for(int i = 0; i < array_list_size(this->list); i ++)
@@ -1332,7 +1506,7 @@ order_item * order_list_find_order_by_ID(order_list * this, uint8_t ID)
 }
 
 
-order_item * order_list_get_order_item_by_idex(order_list * this, uint8_t index)
+order_item * order_list_get_order_item_by_index(order_list * this, uint8_t index)
 {
 	if(index < array_list_size(this->list))
 		return array_list_get(this->list, index);
@@ -1381,7 +1555,7 @@ void hand_scanner_finalize(hand_scanner * this)
 
 
 /*************************** modul order_item *******************************/
-order_item * order_item_new(uint8_t ID, char * item_name, char * item_shortcut_name, double item_price)
+order_item * order_item_new(uint8_t ID, char * item_name, char * item_shortcut_name, double item_price, double tax)
 {
 	order_item * this = (order_item *) malloc(sizeof(order_item));
 
@@ -1390,6 +1564,7 @@ order_item * order_item_new(uint8_t ID, char * item_name, char * item_shortcut_n
 	this->item_shortcut_name = item_shortcut_name;
 	this->item_price = item_price;
 	this->quantity = 0;
+	this->tax = tax;
 
 	return this;
 }
@@ -1419,9 +1594,14 @@ uint8_t order_item_get_ID(order_item * this)
 	return this->ID;
 }
 
-double order_item_get_total_price(order_item * this)
+double order_item_get_total_price_without_tax(order_item * this)
 {
 	return (this->item_price * this->quantity);
+}
+
+double order_item_get_total_price_with_tax(order_item * this)
+{
+	return (this->item_price * this->quantity * this->tax);
 }
 
 void order_item_increase_quantity(order_item * this)
@@ -1482,6 +1662,12 @@ void view_base_set_current_window_geometry(view_base * this, geometry window_geo
 alarm_buffer * view_base_get_alarm_baffer_ref(view_base * this)
 {
 	return this->controler_ref->alarm_buffer_ref;
+}
+
+
+controler * view_base_get_controler_reference(view_base * this)
+{
+	return this->controler_ref;
 }
 
 void view_base_show_order_screen(view_base * this)
@@ -1868,6 +2054,12 @@ GtkWidget * view_base_screen_build_label(view_base_screen * this, double width, 
 }
 
 
+
+controler * view_base_screen_get_controler_reference(view_base_screen * this)
+{
+	return view_base_get_controler_reference(this->view_base_ref);
+}
+
 void view_base_screen_finalize(view_base_screen * this)
 {
 	free(this);
@@ -2084,7 +2276,8 @@ void view_order_screen_build_widgets(view_order_screen * this)
 
 
 	geometry widget_geometry;
-	widget_geometry.width = view_base_recount_x_geometry_by_ratio(this->base_screen_ref->view_base_ref, this->base_screen_ref->view_base_ref->window_base_geometry.width-100);
+	widget_geometry.width = view_base_recount_x_geometry_by_ratio(this->base_screen_ref->view_base_ref, 
+									this->base_screen_ref->view_base_ref->window_base_geometry.width-100);
 	widget_geometry.height = view_base_recount_y_geometry_by_ratio(this->base_screen_ref->view_base_ref, 35);
 
 	
@@ -2175,7 +2368,6 @@ void view_order_screen_pack_widgets(view_order_screen * this)
 			this->list_widget->draw_area,
 			view_base_recount_x_geometry_by_ratio(view_base_ref, 50),
 			view_base_recount_y_geometry_by_ratio(view_base_ref, 80));
-			
 }
 
 void view_order_screen_signals(view_order_screen * this)
@@ -2247,22 +2439,54 @@ view_manual_input_screen * view_manual_input_screen_new(view_base * view_base_re
 	view_manual_input_screen * this = (view_manual_input_screen *) malloc(sizeof(view_manual_input_screen));
 
 	this->base_screen_ref = view_base_screen_new(view_base_ref);
+	this->page_index = 0;
 
 	view_manual_input_screen_build_widgets(this);
 	view_manual_input_screen_language(this);
 	view_manual_input_screen_pack_widgets(this);
+	view_manual_input_screen_fill(this);
 
 	return this;
 }
 
-void view_manual_input_screen_build_widgets(view_manual_input_screen * this)
+void view_manual_input_screen_fill(view_manual_input_screen * this)
+{
+	controler * controler_ref = view_base_screen_get_controler_reference(this->base_screen_ref);
+
+	for(int i = 0; i < 3; i++)
+	{
+		for(int j = 0; j < 5; j++)
+		{
+			uint32_t ID = ((i*5)+(j+1)+(this->page_index*15));
+			GtkWidget * button = this->button_matrix[i][j];
+
+			if(ID <= controler_get_item_number_in_stock(controler_ref))
+			{
+				gtk_widget_set_sensitive(button, TRUE);
+				GtkWidget * button_label = gtk_bin_get_child(GTK_BIN(button));
+				char * item_name = controler_get_item_name_by_ID(controler_ref, ID);
+
+				view_base_screen_set_label_markup_text(button_label, 
+									item_name, 
+									20);
+			}
+			else
+			{
+				gtk_widget_set_sensitive(button, FALSE);
+				gtk_button_set_label(GTK_BUTTON(this->button_matrix[i][j]), "");
+			}
+		}
+	}
+}
+
+static void view_manual_input_screen_build_widgets(view_manual_input_screen * this)
 {
 	double btn_width = 150;
 	double btn_height = 50;
 
 	this->button_matrix = (GtkWidget ***) malloc(sizeof(GtkWidget **)*3);
 
-	for(int i = 0; i<3; i++)
+	for(int i = 0; i < 3; i++)
 	{
 		this->button_matrix[i] = (GtkWidget **) malloc(sizeof(GtkWidget*)*5);
 
@@ -2278,7 +2502,7 @@ void view_manual_input_screen_build_widgets(view_manual_input_screen * this)
 	this->btn_back = view_base_screen_build_button(this->base_screen_ref, btn_width, btn_height);
 }
 
-void view_manual_input_screen_language(view_manual_input_screen * this)
+static void view_manual_input_screen_language(view_manual_input_screen * this)
 {
 	lang * cz_lang = multi_lang_get_current_language(this->base_screen_ref->view_base_ref->multi_lang_ref);
 	GtkWidget * button_label;
@@ -2293,7 +2517,7 @@ void view_manual_input_screen_language(view_manual_input_screen * this)
 	view_base_screen_set_label_markup_text(button_label, cz_lang->btn_next_text, 20);
 }
 
-void view_manual_input_screen_pack_widgets(view_manual_input_screen * this)
+static void view_manual_input_screen_pack_widgets(view_manual_input_screen * this)
 {
 	view_base * view_base_ref = this->base_screen_ref->view_base_ref;
 	geometry base_window_geometry = view_base_ref->window_base_geometry;
@@ -2335,7 +2559,7 @@ void view_manual_input_screen_pack_widgets(view_manual_input_screen * this)
 
 }
 
-void view_manual_input_screen_signals(view_manual_input_screen * this)
+static void view_manual_input_screen_signals(view_manual_input_screen * this)
 {
 	g_signal_connect(G_OBJECT(this->btn_prev), 
 			"clicked",
@@ -2428,97 +2652,121 @@ void view_manual_input_screen_signals(view_manual_input_screen * this)
 			this);
 }
 
-void view_manual_input_screen_btn_prev_click_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_btn_prev_click_callback(GtkWidget * widget, gpointer param)
 {
+	view_manual_input_screen * this = (view_manual_input_screen *) param;
 
+	if(this->page_index > 0)
+	{
+		this->page_index --;
+		gtk_widget_set_sensitive(this->btn_next, TRUE);
+	}
+	else
+	{
+		gtk_widget_set_sensitive(this->btn_prev, FALSE);
+	}
+
+	view_manual_input_screen_fill(this);
 }
 
-void view_manual_input_screen_btn_back_click_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_btn_back_click_callback(GtkWidget * widget, gpointer param)
 {
 	view_base_show_order_screen((view_base*) param);
 }
 
-void view_manual_input_screen_btn_next_click_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_btn_next_click_callback(GtkWidget * widget, gpointer param)
+{
+	view_manual_input_screen * this = (view_manual_input_screen *) param;
+
+	if(this->page_index < controler_get_item_number_in_stock(view_base_screen_get_controler_reference(this->base_screen_ref)))
+	{
+		this->page_index ++;	
+		gtk_widget_set_sensitive(GTK_WIDGET(this->btn_prev), TRUE);
+	}
+	else
+	{
+		gtk_widget_set_sensitive(GTK_WIDGET(this->btn_next), FALSE);
+	}
+
+	view_manual_input_screen_fill(this);
+}
+
+static void view_manual_input_screen_button_metrix_0x0_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_0x0_clicked_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_button_metrix_0x1_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_0x1_clicked_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_button_metrix_0x2_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_0x2_clicked_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_button_metrix_0x3_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_0x3_clicked_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_button_metrix_0x4_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_0x4_clicked_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_button_metrix_1x0_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_1x0_clicked_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_button_metrix_1x1_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_1x1_clicked_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_button_metrix_1x2_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_1x2_clicked_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_button_metrix_1x3_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_1x3_clicked_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_button_metrix_1x4_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_1x4_clicked_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_button_metrix_2x0_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_2x0_clicked_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_button_metrix_2x1_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_2x1_clicked_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_button_metrix_2x2_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_2x2_clicked_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_button_metrix_2x3_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_2x3_clicked_callback(GtkWidget * widget, gpointer param)
+static void view_manual_input_screen_button_metrix_2x4_clicked_callback(GtkWidget * widget, gpointer param)
 {
 
 }
 
-void view_manual_input_screen_button_metrix_2x4_clicked_callback(GtkWidget * widget, gpointer param)
-{
-
-}
-
-void view_manual_input_screen_finalize(view_manual_input_screen * this)
+static void view_manual_input_screen_finalize(view_manual_input_screen * this)
 {
 	view_base_screen_finalize(this->base_screen_ref);
 
@@ -3338,7 +3586,6 @@ void value_widget_signals(value_widget * this)
 order_list_widget * order_list_widget_new(geometry widget_geometry)
 {
 	order_list_widget * this = (order_list_widget *) malloc(sizeof(order_list_widget));
-
 
 	this->widget_geometry.width = widget_geometry.width;
 	this->widget_geometry.height = widget_geometry.height;
