@@ -535,24 +535,21 @@ void database_finalize(database * this);
 static void database_initialize_connection_parameters(database * this);
 
 order_list * order_list_new();
-void order_list_add_new_item(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price, double tax);
-void order_list_increment_item_quantity_by_ID(order_list * this, uint8_t ID);
+void order_list_update(order_list * this, uint8_t ID);
 void order_list_increment_item_quantity_by_index(order_list * this, uint32_t index);
-void order_list_decrement_item_quantity_by_ID(order_list * this, uint8_t ID);
 void order_list_decrement_item_quantity_by_index(order_list * this, uint32_t index);
 uint32_t order_list_size(order_list * this);
 double order_list_get_total_price_without_tax(order_list * this);
 double order_list_get_total_price_with_tax(order_list * this);
-void order_list_remove_by_ID(order_list * this, uint8_t ID);
 void order_list_remove_by_index(order_list * this, uint32_t index);
 void order_list_clean(order_list * this);
 char * order_list_get_order_item_name_at_index(order_list * this, uint32_t index);
 uint32_t order_list_get_order_item_quantity_at_index(order_list * this, uint32_t index);
 double order_list_get_order_item_price_withou_tax_at_index(order_list * this, uint32_t index);
 double order_list_get_order_item_price_with_tax_at_index(order_list * this, uint32_t index);
-order_item * order_list_find_order_by_ID(order_list * this, uint8_t ID);
-order_item * order_list_get_order_item_by_index(order_list * this, uint8_t index);
 void order_list_finalize(order_list * this);
+static order_item * order_list_find_order_by_ID(order_list * this, uint8_t ID);
+static order_item * order_list_get_order_item_by_index(order_list * this, uint8_t index);
 static void order_list_decrement_item_quantity_if_not_null(order_list * this, uint32_t index);
 static void order_list_put_new_item_to_order_list(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price, double tax);
 static void order_list_remove_item_from_list_if_quantity_equal_zero(order_list * this, order_item * item, uint32_t index);
@@ -1335,35 +1332,14 @@ order_list * order_list_new()
 	return this;
 }
 
-void order_list_add_new_item(order_list * this, uint8_t ID, char * item_name, char * item_shortcut_name, double price, double tax)
+void order_list_update(order_list * this, uint8_t ID)
 {
-	order_item * item = NULL;
-
-	if((item = order_list_find_order_by_ID(this, ID)) == NULL)
-	{
-		order_list_put_new_item_to_order_list(this, ID, item_name, item_shortcut_name, price, tax);
-	}
-	else
-	{
-		order_item_increase_quantity(item);
-	}
-}
-
-void order_list_increment_item_quantity_by_ID(order_list * this, uint8_t ID)
-{
-
+	
 }
 
 void order_list_increment_item_quantity_by_index(order_list * this, uint32_t index)
 {
 
-}
-
-void order_list_decrement_item_quantity_by_ID(order_list * this, uint8_t ID)
-{
-	//order_item * item = order_list_find_order_by_ID(this, ID);
-
-	
 }
 
 void order_list_decrement_item_quantity_by_index(order_list * this, uint32_t index)
@@ -1429,18 +1405,6 @@ double order_list_get_total_price_with_tax(order_list * this)
 	return total_price;
 }
 
-void order_list_remove_by_ID(order_list * this, uint8_t ID)
-{
-	for(int i = 0; i < array_list_size(this->list); i++)
-	{
-		if(order_item_get_ID(array_list_get(this->list, i)) == ID)
-		{
-			array_list_remove_with_release(this->list, i, order_item_finalize);
-			return;
-		}
-	}
-}
-
 void order_list_remove_by_index(order_list * this, uint32_t index)
 {
 	array_list_remove_with_release(this->list, index, order_item_finalize);
@@ -1492,7 +1456,7 @@ double order_list_get_order_item_price_with_tax_at_index(order_list * this, uint
 
 }
 
-order_item * order_list_find_order_by_ID(order_list * this, uint8_t ID)
+static order_item * order_list_find_order_by_ID(order_list * this, uint8_t ID)
 {
 	for(int i = 0; i < array_list_size(this->list); i ++)
 	{
@@ -1506,7 +1470,7 @@ order_item * order_list_find_order_by_ID(order_list * this, uint8_t ID)
 }
 
 
-order_item * order_list_get_order_item_by_index(order_list * this, uint8_t index)
+static order_item * order_list_get_order_item_by_index(order_list * this, uint8_t index)
 {
 	if(index < array_list_size(this->list))
 		return array_list_get(this->list, index);
