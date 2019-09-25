@@ -74,6 +74,8 @@ Jednotlivé transakce ať z pokladního systému tak přes faktury se ukládají
 Fakturou lze brát produkty jak z virtuálních sil tak ze skladu s pytli.
 
 
+Je třeba zajistit, aby se při načítání položek do manualního vstupu nahrály všechny položky korektně (díry v intervalech ID) -> je třeba udržet ID konzistentní, to je třeba zajistit v programu pro správu majetku
+
 
 
 
