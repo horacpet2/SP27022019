@@ -77,6 +77,24 @@ Fakturou lze brát produkty jak z virtuálních sil tak ze skladu s pytli.
 Je třeba zajistit, aby se při načítání položek do manualního vstupu nahrály všechny položky korektně (díry v intervalech ID) -> je třeba udržet ID konzistentní, to je třeba zajistit v programu pro správu majetku
 
 
+** TODO **
+
+* napojit výslednou cenu do obrazovky s objednávkou
+* vytvořit rozhraní pro vyčítání parametrů položky objednávky z databáze
+* napojit cenu objednávky do obrazovky s dokončením objednávky
+* napojit kalulátor na počítání s cenou objednávky
+* generování kódu pro tisk účtenky
+* odesílání kódu účtenky do tiskárny
+* napojení databáze
+* vytvořit strukturu databáze
+
+** DONE **
+
+* napojit inkrementaci na tlačítku v obrazovce objednávek
+* napojit dekrementaci na tlačítko v obrazovce objednávek
+* napojit vyčištění objednávky na tlačítko v obrazovce objednávek
+* vytvořit funkcionalitu na označení položek v seznamu
+* přidat skrolování do seznamu
 
 
 
