@@ -13,23 +13,23 @@ Skladový systém může bežet na stejném počítači jako databázový systé
 Od každého klienta může být spuštěno libovolné množství klientů na libovolném množství počítačů. To zároveň vyžaduje nutnost synchronizace přístupu k databázi.
 
 
-		|------- CASHDESK ----CASHDESK_CLIENT 1
-		|		  |
-		|		  |---CASHDESK_CLIENT 2
-		|		  |
-		|		  |---CASHDESK_CLIENT 3
-		|
-DATABASE -------|
-		|
-		|
-		|
-		|
-		|
-		|------- STOCK -----STOCK_CLIENT 1
-			       |
-			       |----STOCK_CLIENT 2
-			       |
-			       |----STOCK_CLIENT 3
+		 |------- CASHDESK ----CASHDESK_CLIENT 1
+		 | 		   |
+		 |		   |---CASHDESK_CLIENT 2
+		 |		   |
+		 |		   |---CASHDESK_CLIENT 3
+		 |
+DATABASE ------- |
+		 |
+		 |
+		 |
+		 |
+		 |
+		 |------- STOCK -----STOCK_CLIENT 1
+			        |
+			        |----STOCK_CLIENT 2
+			        |
+			        |----STOCK_CLIENT 3
 
 
 
