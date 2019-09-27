@@ -8,6 +8,7 @@
 #include <time.h>
 #include <aclib.h>
 #include <libpq-fe.h>
+#include <math.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
@@ -25,6 +26,14 @@
 #define CONF_CYCLIC_INTERUPT_INTERVAL 1000
 
 #define CONF_DB_CONNECTION ""
+
+
+#define GS ((char) 0x1d) 
+#define NUL ((char) 0x00)
+#define ESC ((char) 0x1b)
+#define EOT ((char) 4)
+#define SOH ((char) 1)
+#define ETX ((char) 3)
 
 enum _side_orientation_
 {
@@ -185,7 +194,8 @@ struct _settings_
 
 struct _printer_
 {
-
+	c_string * print_buffer;
+	uint32_t print_counter;
 };
 
 struct _alarm_report_
@@ -205,6 +215,8 @@ struct _alarm_buffer_
 
 	uint32_t error_index;
 	uint32_t warning_index;
+
+	char ** alarm_text_list;
 };
 
 struct _database_
@@ -281,6 +293,8 @@ struct _view_base_
 
 	double window_width_ratio;
 	double window_height_ratio;
+
+	c_string * price_buffer;
 };
 
 struct _view_base_screen_
@@ -327,15 +341,6 @@ struct _lang_
 	const char * lbl_customer_payed_text;
 	const char * lbl_order_sum_text;
 	const char * lbl_money_back_text;
-
-	const char * error_database_connection;
-	const char * error_unknown_order_ID;
-	const char * error_bill_print_error;
-	const char * error_stock_quantity_update_error;
-
-	const char * warning_unknown_position_in_order_list;
-	const char * warning_shortage_stock;
-
 };
 
 struct _view_bill_viewer_screen_
@@ -356,7 +361,6 @@ struct _view_order_screen_
 	GtkWidget * btn_manual_input;
 
 	value_widget * order_sum_price;
-	c_string * price_buffer;
 };
 
 struct _view_manual_input_screen_
@@ -399,7 +403,6 @@ struct _view_order_finish_screen_
 	GtkWidget * btn_finish;
 	
 	c_string * calculator_buffer;
-	c_string * order_price_buffer;
 	c_string * money_back_buffer;
 
 	uint32_t calculator_register;
@@ -473,10 +476,13 @@ struct _order_list_widget_
 controler * controler_new();
 uint32_t controler_get_item_number_in_stock(controler * this);
 char * controler_get_item_name_by_ID(controler * this, uint8_t ID);
+char * controler_get_item_shortcut_name_by_ID(controler * this, uint8_t ID);
+double controler_get_item_price_by_ID(controler * this, uint8_t ID);
+double controler_get_item_tax_by_ID(controler * this, uint8_t ID);
+uint32_t controler_get_item_quantity_by_ID(controler * this, uint8_t ID);
 void controler_increase_item_quantity_by_index(controler * this, uint32_t index);
 void controler_decrease_item_quantity_by_index(controler * this, uint32_t index);
 void controler_clear_order_list(controler * this);
-uint32_t controler_get_item_quantity_by_ID(controler * this, uint8_t ID);
 void controler_update_order_list(controler * this, uint8_t ID);
 double controler_get_order_total_price_with_tax(controler * this);
 double controler_get_order_total_price_without_tax(controler * this);
@@ -501,8 +507,13 @@ settings * settings_new();
 void settings_finalize(settings * this);
 
 printer * printer_new();
+void printer_clear_buffer(printer * this);
+void printer_clear_print_counter(printer * this);
+void printer_increment_print_counter(printer * this);
+uint32_t printer_get_print_counter(printer * this);
+bool printer_print_equest(printer * this);
 void printer_finalize(printer * this);
-
+static void printer_replace_unsupported_characters(printer * this);
 
 alarm_report * alarm_report_new(uint32_t alarm_code, const char * alarm_description);
 uint32_t alarm_report_get_code(alarm_report * this);
@@ -511,8 +522,8 @@ time_t alarm_report_get_time(alarm_report * this);
 void alarm_report_finalize(void * this); 
 
 alarm_buffer * alarm_buffer_new();
-void alarm_buffer_set_error(alarm_buffer * this, uint32_t alarm_code, const char * alarm_description);
-void alarm_buffer_set_warning(alarm_buffer * this, uint32_t alarm_code, const char * alarm_description);
+void alarm_buffer_set_error(alarm_buffer * this, uint32_t alarm_code);
+void alarm_buffer_set_warning(alarm_buffer * this, uint32_t alarm_code);
 uint32_t alarm_buffer_available_errors(alarm_buffer * this);
 uint32_t alarm_buffer_available_warnings(alarm_buffer * this);
 alarm_report * alarm_buffer_get_next_error_report(alarm_buffer * this);
@@ -520,6 +531,7 @@ alarm_report * alarm_buffer_get_next_warning_report(alarm_buffer * this);
 void alarm_buffer_reset(alarm_buffer * this);
 void alarm_buffer_finalize(alarm_buffer * this);
 static alarm_report * alarm_buffer_get_next_report(array_list * buffer, uint32_t * index);
+static void alarm_buffer_initialize_alarm_text_list(alarm_buffer * this);
 
 database * database_new();
 void database_set_current_stock(database * this, const char * current_stock);
@@ -538,11 +550,19 @@ char * database_get_tcp_port(database * this);
 void database_disconnect(database * this);
 bool database_is_connected(database * this);
 void database_finalize(database * this);
+uint32_t database_get_item_number_in_stock(database * this);
+uint32_t database_get_item_quantity(database * this, uint8_t ID);
+char * database_get_item_name(database * this, uint8_t ID);
+char * database_get_item_shortcut_name(database * this, uint8_t ID);
+double database_get_item_tax(database * this, uint8_t ID);
+double database_get_item_price(database * this, uint8_t ID);
+bool database_set_item_quantity(database * this, uint8_t ID, uint32_t new_quantity);
 static void database_initialize_connection_parameters(database * this);
 
 order_list * order_list_new();
 void order_list_increment_item_quantity_by_index(order_list * this, uint32_t index);
 void order_list_decrement_item_quantity_by_index(order_list * this, uint32_t index);
+uint8_t order_list_get_item_ID_by_index(order_list * this, uint32_t index);
 uint32_t order_list_size(order_list * this);
 double order_list_get_total_price_without_tax(order_list * this);
 double order_list_get_total_price_with_tax(order_list * this);
@@ -625,7 +645,6 @@ lang * multi_lang_get_current_language(multi_lang * this);
 void multi_lang_initialize_language_structure(multi_lang * this);
 void multi_lang_initialize_czech_text(multi_lang * this);
 void multi_lang_set_common_text_czech(lang * this);
-void multi_lang_set_alarm_text_czech(lang * this);
 void multi_lang_set_order_screen_text_czech(lang * this);
 void multi_lang_set_manual_input_screen_text_czech(lang * this);
 void multi_lang_set_order_finish_screen_text_czech(lang * this);
@@ -646,6 +665,7 @@ void view_order_screen_build_list_widget(view_order_screen * this);
 void view_order_screen_language(view_order_screen * this);
 void view_order_screen_pack_widgets(view_order_screen * this);
 void view_order_screen_signals(view_order_screen * this);
+gboolean view_order_screen_show_total_price_callback(GtkWidget * widget,  cairo_t * cr, gpointer param);
 void view_order_screen_btn_manual_input_click_callback(GtkWidget * widget, gpointer param);
 void view_order_screen_btn_increase_quantity_click_callback(GtkWidget * widget, gpointer param);
 void view_order_screen_btn_decrease_quantity_click_callback(GtkWidget * widget, gpointer param);
@@ -904,7 +924,7 @@ bool controler_database_is_connected(controler * this)
 
 uint32_t controler_get_item_number_in_stock(controler * this)
 {
-	return 20;
+	return database_get_item_number_in_stock(this->database_ref);
 }
 
 void controler_update_order_list(controler * this, uint8_t ID)
@@ -919,14 +939,27 @@ void controler_update_order_list(controler * this, uint8_t ID)
 
 static void controler_add_order_item(controler * this, uint8_t ID)
 {
-	char * item_name = controler_get_item_name_by_ID(this, ID);
-	char * item_shortcut_name = NULL;
-	double price = 0;
-	double tax = 0;
+	if(database_is_connected(this->database_ref) == true)
+	{
+		if(controler_get_item_quantity_by_ID(this, ID) > 0)
+		{
+			char * item_name = controler_get_item_name_by_ID(this, ID);
+			char * item_shortcut_name = controler_get_item_shortcut_name_by_ID(this, ID);
+			double price = controler_get_item_price_by_ID(this, ID);
+			double tax = controler_get_item_tax_by_ID(this, ID);
 
-	order_list_put_new_item_to_order_list(this->order_list_ref, ID, item_name, item_shortcut_name, price, tax);
+			order_list_put_new_item_to_order_list(this->order_list_ref, ID, item_name, item_shortcut_name, price, tax);
+		}
+		else
+		{
+			alarm_buffer_set_warning(this->alarm_buffer_ref,warning_index_shortage_stock);
+		}
+	}
+	else
+	{
+		alarm_buffer_set_error(this->alarm_buffer_ref,error_index_database_connection);
+	}
 }
-
 
 double controler_get_order_total_price_with_tax(controler * this)
 {
@@ -963,16 +996,14 @@ double controler_get_order_item_price_with_tax_at_index(controler * this, uint32
 	return order_list_get_order_item_price_with_tax_at_index(this->order_list_ref, index);
 }
 
-
-uint32_t controler_get_item_quantity_by_ID(controler * this, uint8_t ID)
-{
-	return 0;
-}
-
-
 void controler_increase_item_quantity_by_index(controler * this, uint32_t index)
 {
-	order_list_increment_item_quantity_by_index(this->order_list_ref, index);
+	uint8_t order_item_id = order_list_get_item_ID_by_index(this->order_list_ref, index);
+
+	if(controler_get_item_quantity_by_ID(this, order_item_id) > controler_get_order_item_quantity_at_index(this, index))
+		order_list_increment_item_quantity_by_index(this->order_list_ref, index);
+	else
+		alarm_buffer_set_warning(this->alarm_buffer_ref, warning_index_shortage_stock);
 }
 
 void controler_clear_order_list(controler * this)
@@ -983,6 +1014,26 @@ void controler_clear_order_list(controler * this)
 void controler_decrease_item_quantity_by_index(controler * this, uint32_t index)
 {
 	order_list_decrement_item_quantity_by_index(this->order_list_ref, index);
+}
+
+uint32_t controler_get_item_quantity_by_ID(controler * this, uint8_t ID)
+{
+	return database_get_item_quantity(this->database_ref, ID);
+}
+
+char * controler_get_item_shortcut_name_by_ID(controler * this, uint8_t ID)
+{
+	return database_get_item_shortcut_name(this->database_ref, ID);
+}
+
+double controler_get_item_price_by_ID(controler * this, uint8_t ID)
+{
+	return database_get_item_price(this->database_ref, ID);
+}
+
+double controler_get_item_tax_by_ID(controler * this, uint8_t ID)
+{
+	return database_get_item_tax(this->database_ref, ID);
 }
 
 char * controler_get_item_name_by_ID(controler * this, uint8_t ID)
@@ -1031,19 +1082,14 @@ char * controler_get_item_name_by_ID(controler * this, uint8_t ID)
 			return "mouka 20";
 		default:
 			return "";
-
-
 	}
 }
-
 
 static void controler_create_database_connection(controler * this)
 {
 	this->database_ref = database_new();
 	database_connect(this->database_ref);
 }
-
-
 
 static void controler_finalize(controler * this)
 {
@@ -1107,11 +1153,78 @@ printer * printer_new()
 {
 	printer * this = (printer*) malloc(sizeof(printer));
 
+	this->print_buffer = c_string_new();
+	this->print_counter = 0;
+
 	return this;
+}
+
+void printer_clear_buffer(printer * this)
+{
+	c_string_clear(this->print_buffer);
+}
+
+void printer_clear_print_counter(printer * this)
+{
+	this->print_counter = 0;
+}
+
+void printer_increment_print_counter(printer * this)
+{
+	this->print_counter ++;
+}
+
+bool printer_print_equest(printer * this)
+{
+	printer_replace_unsupported_characters(this);
+
+	#ifdef __linux__
+		FILE * printer_ref = fopen("/dev/usb/lp0", "w");
+		if(printer_ref != NULL)
+		{
+			fprintf(printer_ref, "%s", c_string_get_char_array(this->print_buffer));
+			fclose(printer_ref);
+			return true;
+		}
+		else
+		{
+			return false	
+		}
+
+	#elif defined(_WIN32) || defined(_WIN64)
+		return false;
+	#else
+		fprintf(stderr, "Unsupported platform!\n");
+		return false;
+	#endif	
+}
+
+uint32_t printer_get_print_counter(printer * this)
+{
+	return this->print_counter;
+}
+
+static void printer_replace_unsupported_characters(printer * this)
+{	
+	char * unsupported_characters = "ěščřžýáíéúůÉŠČŘŽÝÁÍÉÚÚ";
+	char * supported_characters = "escrzyaieuuESCRZYAIEUU";
+
+	for(int i = 0; i < c_string_len(this->print_buffer); i++)
+	{
+		for(int j = 0; j < strlen(unsupported_characters); j++)
+		{
+			if(c_string_get_char(this->print_buffer, i) == unsupported_characters[j])
+			{
+					c_string_set_char(this->print_buffer, j, supported_characters[j]);
+					break;
+			}
+		}
+	}
 }
 
 void printer_finalize(printer * this)
 {
+	c_string_finalize_v2(this->print_buffer);
 	free(this);
 }
 
@@ -1164,22 +1277,37 @@ alarm_buffer * alarm_buffer_new()
 	this->error_index = 0;
 	this->warning_index = 0;
 
+	alarm_buffer_initialize_alarm_text_list(this);
+
 	return this;
 }
 
-void alarm_buffer_set_error(alarm_buffer * this, uint32_t alarm_code, const char * alarm_description)
+static void alarm_buffer_initialize_alarm_text_list(alarm_buffer * this)
+{
+	this->alarm_text_list = (char **) malloc(sizeof(char *)*(error_number+warning_number));
+
+	this->alarm_text_list[error_index_database_connection] = "E1 Chyba spojení s databází";
+	this->alarm_text_list[error_index_unknown_order_ID] = "E2 Neznámé ID objednávky";
+	this->alarm_text_list[error_index_bill_print_error] = "E3 Tisk účtenky nebyl úspěšný";
+	this->alarm_text_list[error_index_stock_quantity_update_error] = "E4 Chyba při aktualizaci skladových zásob";
+
+	this->alarm_text_list[error_number+warning_index_unknown_position_in_order_list] = "W1 Neznámá pozice v objednávkovém seznamu";
+	this->alarm_text_list[error_number+warning_index_shortage_stock] = "W2 Nedostatke skladových zásob";
+}
+
+void alarm_buffer_set_error(alarm_buffer * this, uint32_t alarm_code)
 {
 	this->error = true;
 
-	alarm_report * report = alarm_report_new(alarm_code, alarm_description);
+	alarm_report * report = alarm_report_new(alarm_code, this->alarm_text_list[alarm_code]);
 	array_list_add(this->error_buffer, report);
 }
 
-void alarm_buffer_set_warning(alarm_buffer * this, uint32_t alarm_code, const char * alarm_description)
+void alarm_buffer_set_warning(alarm_buffer * this, uint32_t alarm_code)
 {
 	this->warning = true;
 
-	alarm_report * report = alarm_report_new(alarm_code, alarm_description);
+	alarm_report * report = alarm_report_new(alarm_code, this->alarm_text_list[error_number+alarm_code]);
 	array_list_add(this->warning_buffer, report);
 }
 
@@ -1354,6 +1482,41 @@ void database_disconnect(database * this)
 		PQfinish(this->conn);
 }
 
+uint32_t database_get_item_number_in_stock(database * this)
+{
+	return 20;
+}
+
+uint32_t database_get_item_quantity(database * this, uint8_t ID)
+{
+	return 0;
+}
+
+char * database_get_item_name(database * this, uint8_t ID)
+{
+	return NULL;
+}
+
+char * database_get_item_shortcut_name(database * this, uint8_t ID)
+{
+	return NULL;
+}
+
+double database_get_item_tax(database * this, uint8_t ID)
+{
+	return 1.1;
+}
+
+double database_get_item_price(database * this, uint8_t ID)
+{
+	return 1.1;
+}
+
+bool database_set_item_quantity(database * this, uint8_t ID, uint32_t new_quantity)
+{
+	return false;
+}	
+
 bool database_is_connected(database * this)
 {
  	if (PQstatus(this->conn) == CONNECTION_BAD) 
@@ -1386,6 +1549,19 @@ void order_list_increment_item_quantity_by_index(order_list * this, uint32_t ind
 
 	if(item != NULL)
 	  	order_item_increase_quantity(item);
+}
+
+uint8_t order_list_get_item_ID_by_index(order_list * this, uint32_t index)
+{
+	if(index < array_list_size(this->list))
+	{
+		order_item * item = array_list_get(this->list, index);
+		return order_item_get_ID(item);
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 void order_list_decrement_item_quantity_by_index(order_list * this, uint32_t index)
@@ -1654,6 +1830,7 @@ view_base * view_base_new(controler * controler_ref, geometry window_base_geomet
 	view_base_build_container(this);
 
 	this->multi_lang_ref = multi_lang_new();
+	this->price_buffer = c_string_new();
 
 	return this;
 }
@@ -1833,15 +2010,17 @@ static gboolean view_cyclic_interupt(gpointer param)
 {
 	view * this = (view*) param;
 
-	//gtk_widget_queue_draw(GTK_WIDGET(this->window));
-
 	view_base_redraw(this->view_base_ref);
 
 	if(controler_database_is_connected(this->controler_ref) == false)
 	{
-		lang * cz_lang = multi_lang_get_current_language(this->view_base_ref->multi_lang_ref);
-		alarm_buffer_set_error(view_base_get_alarm_baffer_ref(this->view_base_ref), 1, cz_lang->error_database_connection);
+		alarm_buffer_set_error(view_base_get_alarm_baffer_ref(this->view_base_ref), error_index_database_connection);
 	}
+
+	char number_buffer[16];
+	sprintf(number_buffer, "%d Kč", (int) round(controler_get_order_total_price_with_tax(this->controler_ref)));
+
+	c_string_set_string(this->view_base_ref->price_buffer, number_buffer);
 
 	return TRUE;
 }
@@ -1852,7 +2031,6 @@ static void view_hide_cursor(view * this)
 	GdkWindow * win = gtk_widget_get_window((this->window));
 	gdk_window_set_cursor((win), cursor);
 }
-
 
 static void view_build_main_window(view * this)
 {
@@ -2122,7 +2300,6 @@ void multi_lang_initialize_czech_text(multi_lang * this)
 	lang_struct_cz->language_name = "Čeština";
 
 	multi_lang_set_common_text_czech(lang_struct_cz);
-	multi_lang_set_alarm_text_czech(lang_struct_cz);
 	multi_lang_set_order_screen_text_czech(lang_struct_cz);
 	multi_lang_set_manual_input_screen_text_czech(lang_struct_cz);
 	multi_lang_set_order_finish_screen_text_czech(lang_struct_cz);
@@ -2135,17 +2312,6 @@ void multi_lang_set_common_text_czech(lang * this)
 	this->currency_text = "Kč";
 	this->default_sum_price_text = "0.0 Kč";
 	this->btn_back_text = "Zpět";
-}
-
-void multi_lang_set_alarm_text_czech(lang * this)
-{
-	this->error_database_connection = "E1 Chyba spojení s databází";
-	this->error_unknown_order_ID = "E2 Neznámé ID objednávky";
-	this->error_bill_print_error = "E3 Tisk účtenky nebyl úspěšný";
-	this->error_stock_quantity_update_error = "E4 Chyba při aktualizaci skladových zásob";
-
-	this->warning_unknown_position_in_order_list = "W1 Neznámá pozice v objednávkovém seznamu";
-	this->warning_shortage_stock = "W2 Nedostatke skladových zásob";
 }
 
 void multi_lang_set_order_screen_text_czech(lang * this)
@@ -2262,8 +2428,6 @@ view_order_screen * view_order_screen_new(view_base * view_base_ref)
 
 	this->base_screen_ref = view_base_screen_new(view_base_ref);
 
-	this->price_buffer = c_string_new();
-
 	view_order_screen_build_widgets(this);
 	view_order_screen_language(this);
 	view_order_screen_pack_widgets(this);
@@ -2300,12 +2464,10 @@ void view_order_screen_build_widgets(view_order_screen * this)
 	this->btn_pay = view_base_screen_build_button(this->base_screen_ref, button_width_long, widget_height);
 	this->btn_manual_input = view_base_screen_build_button(this->base_screen_ref, button_width_long, widget_height);
 
-
 	geometry widget_geometry;
 	widget_geometry.width = view_base_recount_x_geometry_by_ratio(this->base_screen_ref->view_base_ref, 
 									this->base_screen_ref->view_base_ref->window_base_geometry.width-100);
 	widget_geometry.height = view_base_recount_y_geometry_by_ratio(this->base_screen_ref->view_base_ref, 35);
-
 	
 	double bg_color[3] = {0.91, 0.91, 0.91};
 
@@ -2315,7 +2477,7 @@ void view_order_screen_build_widgets(view_order_screen * this)
 	value_widget_set_left_padding(this->order_sum_price, 30);
 	value_widget_set_right_padding(this->order_sum_price, 30);
 	value_widget_set_font_family(this->order_sum_price, "Arial");
-	value_widget_set_value(this->order_sum_price, this->price_buffer);
+	value_widget_set_value(this->order_sum_price, this->base_screen_ref->view_base_ref->price_buffer);
 
 }
 
@@ -2355,8 +2517,6 @@ void view_order_screen_language(view_order_screen * this)
 			cz_lang->btn_manual_input_text);
 
 	value_widget_set_label(this->order_sum_price, cz_lang->lbl_sum_text);
-	c_string_set_string(this->price_buffer, (char*) cz_lang->default_sum_price_text);
-
 
 	order_list_widget_add_column(this->list_widget, cz_lang->order_list_widget_goods_text);
 	order_list_widget_add_column(this->list_widget, cz_lang->order_list_widget_quantity_text);
@@ -2408,6 +2568,18 @@ void view_order_screen_pack_widgets(view_order_screen * this)
 			view_base_recount_y_geometry_by_ratio(view_base_ref, 80));
 }
 
+gboolean view_order_screen_show_total_price_callback(GtkWidget * widget,  cairo_t * cr, gpointer param)
+{
+	view_order_screen * this = (view_order_screen *) param;
+	controler * controler_ref = view_base_screen_get_controler_reference(this->base_screen_ref);
+
+	gtk_widget_set_sensitive(GTK_WIDGET(this->btn_pay), controler_get_order_list_size(controler_ref) > 0);
+	gtk_widget_set_sensitive(GTK_WIDGET(this->btn_increase_quantity), order_list_widget_is_selected(this->list_widget));
+	gtk_widget_set_sensitive(GTK_WIDGET(this->btn_decrease_quantity), order_list_widget_is_selected(this->list_widget));
+
+	return FALSE;
+}
+
 void view_order_screen_signals(view_order_screen * this)
 {
 	g_signal_connect(G_OBJECT(this->btn_manual_input), 
@@ -2435,6 +2607,11 @@ void view_order_screen_signals(view_order_screen * this)
 			G_CALLBACK(view_order_screen_btn_clear_order_click_callback),
 			this);
 
+	g_signal_connect(G_OBJECT(this->base_screen_ref->container), 
+			"draw", 
+			G_CALLBACK(view_order_screen_show_total_price_callback), 
+			this);
+
 }
 
 void view_order_screen_btn_manual_input_click_callback(GtkWidget * widget, gpointer param)
@@ -2450,6 +2627,8 @@ void view_order_screen_btn_increase_quantity_click_callback(GtkWidget * widget, 
 	if(order_list_widget_is_selected(this->list_widget))
 			controler_increase_item_quantity_by_index(view_base_screen_get_controler_reference(this->base_screen_ref),
 														order_list_widget_get_selected_row(this->list_widget));
+
+	view_base_redraw(this->base_screen_ref->view_base_ref);
 }
 
 void view_order_screen_btn_decrease_quantity_click_callback(GtkWidget * widget, gpointer param)
@@ -2459,6 +2638,9 @@ void view_order_screen_btn_decrease_quantity_click_callback(GtkWidget * widget, 
 	if(order_list_widget_is_selected(this->list_widget))
 			controler_decrease_item_quantity_by_index(view_base_screen_get_controler_reference(this->base_screen_ref),
 														order_list_widget_get_selected_row(this->list_widget));
+
+
+	view_base_redraw(this->base_screen_ref->view_base_ref);
 }
 
 void view_order_screen_btn_pay_click_callback(GtkWidget * widget, gpointer param)
@@ -2472,6 +2654,7 @@ void view_order_screen_btn_clear_order_click_callback(GtkWidget * widget, gpoint
 	controler_clear_order_list(view_base_screen_get_controler_reference(this->base_screen_ref));	
 
 	order_list_widget_initialize(this->list_widget);
+	view_base_redraw(this->base_screen_ref->view_base_ref);
 }
 
 void view_order_screen_finalize(view_order_screen * this)
@@ -2564,9 +2747,9 @@ static void view_manual_input_screen_language(view_manual_input_screen * this)
 	
 	button_label = gtk_bin_get_child(GTK_BIN(this->btn_prev));
 	view_base_screen_set_label_markup_text(button_label, 
-				"<span font_desc=\"%d\"><b>%s</b></span>",
-				20,
-				cz_lang->btn_prev_text);
+			"<span font_desc=\"%d\"><b>%s</b></span>",
+			20,
+			cz_lang->btn_prev_text);
 
 	button_label = gtk_bin_get_child(GTK_BIN(this->btn_back));
 	view_base_screen_set_label_markup_text(button_label, 
@@ -2619,8 +2802,6 @@ static void view_manual_input_screen_pack_widgets(view_manual_input_screen * thi
 			this->btn_next,
 			view_base_recount_x_geometry_by_ratio(view_base_ref, base_window_geometry.width/2-75 + 200),
 			btn_horizontal_line_position);
-
-
 }
 
 static void view_manual_input_screen_signals(view_manual_input_screen * this)
@@ -2970,7 +3151,6 @@ view_order_finish_screen * view_order_finish_screen_new(view_base * view_base_re
 	view_order_finish_screen * this = (view_order_finish_screen *) malloc(sizeof(view_order_finish_screen));
 
 	this->calculator_buffer = c_string_new_with_init("0 Kč");
-	this->order_price_buffer = c_string_new_with_init("0 Kč");
 	this->money_back_buffer = c_string_new_with_init("0 Kč");
 
 	this->calculator_register = 0;
@@ -3012,7 +3192,7 @@ void view_order_finish_screen_build_widgets(view_order_finish_screen * this)
 	double bg_color_1[3] = {0.84, 0.84, 0.84};
 	double bg_color_2[3] = {0.91, 0.91, 0.91};
 
-	this->order_sum_price = view_order_build_value_widget(value_widget_geometry, bg_color_2, this->order_price_buffer);
+	this->order_sum_price = view_order_build_value_widget(value_widget_geometry, bg_color_2, this->base_screen_ref->view_base_ref->price_buffer);
 	this->customer_payed = view_order_build_value_widget(value_widget_geometry, bg_color_1, this->calculator_buffer);
 	this->count_money_back = view_order_build_value_widget(value_widget_geometry, bg_color_2, this->money_back_buffer);
 }
@@ -3143,8 +3323,11 @@ void view_order_finish_screen_pack_widgets(view_order_finish_screen * this)
 
 void view_order_finish_screen_count_money_back(view_order_finish_screen * this)
 {
-	if(this->calculator_register > 0)
-		view_order_finish_screen_convert_string_price(this->calculator_register - 0, this->money_back_buffer);
+	controler * controler_ref = view_base_screen_get_controler_reference(this->base_screen_ref);
+	double order_price = controler_get_order_total_price_with_tax(controler_ref);
+
+	if(this->calculator_register > order_price)
+		view_order_finish_screen_convert_string_price(this->calculator_register - order_price , this->money_back_buffer);
 	else
 		view_order_finish_screen_convert_string_price(0, this->money_back_buffer);
 }
@@ -3271,6 +3454,9 @@ void view_order_finish_screen_btn_finish_click_callback(GtkWidget * widget, gpoi
 {
 	view_order_finish_screen * this = (view_order_finish_screen *) param;
 	view_base_show_order_screen(this->base_screen_ref->view_base_ref);
+
+
+	controler_clear_order_list(view_base_screen_get_controler_reference(this->base_screen_ref));	
 }
 
 
@@ -3482,13 +3668,14 @@ void alarm_widget_signals(alarm_widget * this)
 	g_signal_connect(G_OBJECT(this->draw_area), 
 				"button_press_event", 
 				G_CALLBACK(alarm_widget_reset_error_buffer_callback), 
-				this->alarm_buffer_ref);
+				this);
 }
 
 void alarm_widget_reset_error_buffer_callback(GtkWidget * widget, GdkEventButton * event, gpointer param)
 {
-	alarm_buffer * this = (alarm_buffer*) param;
-	alarm_buffer_reset(this);
+	alarm_widget * this = (alarm_widget*) param;
+	alarm_buffer_reset(this->alarm_buffer_ref);
+	gtk_widget_queue_draw(GTK_WIDGET(this->draw_area));
 }
 
 void alarm_widget_finalize(alarm_widget * this)
@@ -3840,7 +4027,7 @@ void order_list_widget_draw_content(order_list_widget * this, cairo_t * cr)
 			if((i % 2) == 0)
 				cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
 			else
-				cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);	
+				cairo_set_source_rgb(cr, 0.9, 0.9, 0.9);	
 		}
 
 		cairo_rectangle(cr, 0, column_height*(i), this->widget_geometry.width, column_height);
@@ -3884,6 +4071,9 @@ gboolean order_list_widget_draw_callback(GtkWidget * widget, cairo_t * cr, gpoin
 {
 	order_list_widget * this = (order_list_widget*) param;
 
+	if((order_list_size(this->source_order_list) == 0) || (order_list_size(this->source_order_list) <= this->selected_row_index))
+			this->is_row_selected = false;
+
 	if(order_list_size(this->source_order_list) > this->visible_row_number)
 	{
 		double column_height = (this->widget_geometry.height-50)/(this->visible_row_number);
@@ -3914,7 +4104,6 @@ void order_list_widget_set_font_family(order_list_widget * this, const char * fo
 {
 	this->font_family = font_family;
 }
-
 
 void order_list_widget_initialize(order_list_widget * this)
 {

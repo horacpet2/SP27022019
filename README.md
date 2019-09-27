@@ -19,7 +19,7 @@ Od každého klienta může být spuštěno libovolné množství klientů na li
 		 |		   |
 		 |		   |---CASHDESK_CLIENT 3
 		 |
-DATABASE ------- |
+DATABASE |
 		 |
 		 |
 		 |
@@ -79,10 +79,9 @@ Je třeba zajistit, aby se při načítání položek do manualního vstupu nahr
 
 ** TODO **
 
-* napojit výslednou cenu do obrazovky s objednávkou
-* vytvořit rozhraní pro vyčítání parametrů položky objednávky z databáze
-* napojit cenu objednávky do obrazovky s dokončením objednávky
-* napojit kalulátor na počítání s cenou objednávky
+* napojit systémový log 
+* napojit chybový log do chybového bufferu
+* napojit chybový buffer
 * generování kódu pro tisk účtenky
 * odesílání kódu účtenky do tiskárny
 * napojení databáze
@@ -90,11 +89,18 @@ Je třeba zajistit, aby se při načítání položek do manualního vstupu nahr
 
 ** DONE **
 
+* vytvořit rozhraní pro vyčítání parametrů položky objednávky z databáze (v controleru)	
+* zaokrouhlit cenu objednávky
+* napojit kalulátor na počítání s cenou objednávky
+* napojit cenu objednávky do obrazovky s dokončením objednávky
+* napojit na tlačítko doknčit v obrazovce pro dokončení objednávky příkaz na vyčištění objednákového seznamu
 * napojit inkrementaci na tlačítku v obrazovce objednávek
 * napojit dekrementaci na tlačítko v obrazovce objednávek
 * napojit vyčištění objednávky na tlačítko v obrazovce objednávek
 * vytvořit funkcionalitu na označení položek v seznamu
 * přidat skrolování do seznamu
+* napojit výslednou cenu do obrazovky s objednávkou
+
 
 
 
