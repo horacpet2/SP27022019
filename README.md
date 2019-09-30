@@ -76,19 +76,43 @@ Fakturou lze brát produkty jak z virtuálních sil tak ze skladu s pytli.
 
 Je třeba zajistit, aby se při načítání položek do manualního vstupu nahrály všechny položky korektně (díry v intervalech ID) -> je třeba udržet ID konzistentní, to je třeba zajistit v programu pro správu majetku
 
+databázové tabulky:
+stock
+virtual_silo
+transactions
+
+
+** postgres **
+
+výpis všech databázových tabulek v dané databázi:  \dt
+výpis všech databází v systému: \l
+přepnutí do dané databázové tabulky \c jmeno_tabulky
+výpis jmen a datových typů jednotlivých sloupců tabulky: \d+ jmeno_tabulky
+vymazání database: DROP DATABASE jmeno_databaze;
+vytvoření databáze: CREATE DATABASE jméno_databáze;
+vytvoření databázové tabulky: CREATE TABLE jmeno_databaze(formát tabulky);
+
+(http://127.0.0.1:56642/browser/)
+
+
+vytvoří tabulku pro sklad: CREATE TABLE stock(ID int, itemName varchar(255), itemShorcutName varchar(255), quantity int, tax float, price float);
+vloží záznam do tabulky stock: INSERT INTO stock VALUES(1, 'Žitná mouka 5Kg', 'Žit m 5Kg', 100, 1.15, 55);
+vrátí počet záznamů v tabulce stock SELECT COUNT(*) FROM stock;
+
+
 
 ** TODO **
 
 * napojit systémový log 
 * napojit chybový log do chybového bufferu
 * napojit chybový buffer
-* generování kódu pro tisk účtenky
-* odesílání kódu účtenky do tiskárny
 * napojení databáze
 * vytvořit strukturu databáze
 
 ** DONE **
 
+* generování kódu pro tisk účtenky
+* odesílání kódu účtenky do tiskárny
 * vytvořit rozhraní pro vyčítání parametrů položky objednávky z databáze (v controleru)	
 * zaokrouhlit cenu objednávky
 * napojit kalulátor na počítání s cenou objednávky
@@ -103,6 +127,14 @@ Je třeba zajistit, aby se při načítání položek do manualního vstupu nahr
 
 
 
+
+
+** BUGS **
+
+BUG 001 - pád programu bez udání příčiny při přechodu na obrazovku platby
+chyba se objevuje při stisknutí tlačítka Zaplatit. Ve volané obslužné funkci se vykonává generování kódu pro tiskánu, které bylo v nedávné době vytvořeno a implementováno, od této doby byl dvakrát zaznamenám pád programu. Chyba se pravděpodobně nachází uvnitř funkce  controler_build_bill.
+Tato funkce pracuje s neuplnými daty, protože databáze ještě není napojena, je možné, že k pádu dojde z důvodu chybného přístupu k neúplným datům, 
+Chyba se bude řešit až po napojení databáze a kompletních datech ve struktuře order_list, funkce je do té doby zakomentována
 
 
 

@@ -474,9 +474,12 @@ struct _order_list_widget_
 /***************** deklarace funkcí **********************************/
 
 controler * controler_new();
+bool controler_check_database_connected(controler * this);
+bool controler_database_is_connected(controler * this);
+bool controler_check_id_exists(controler * this, uint8_t ID);
 uint32_t controler_get_item_number_in_stock(controler * this);
-char * controler_get_item_name_by_ID(controler * this, uint8_t ID);
-char * controler_get_item_shortcut_name_by_ID(controler * this, uint8_t ID);
+c_string * controler_get_item_name_by_ID(controler * this, uint8_t ID);
+c_string * controler_get_item_shortcut_name_by_ID(controler * this, uint8_t ID);
 double controler_get_item_price_by_ID(controler * this, uint8_t ID);
 double controler_get_item_tax_by_ID(controler * this, uint8_t ID);
 uint32_t controler_get_item_quantity_by_ID(controler * this, uint8_t ID);
@@ -491,11 +494,18 @@ char * controler_get_order_item_name_at_index(controler * this, uint32_t index);
 uint32_t controler_get_order_item_quantity_at_index(controler * this, uint32_t index);
 double controler_get_order_item_price_withou_tax_at_index(controler * this, uint32_t index);
 double controler_get_order_item_price_with_tax_at_index(controler * this, uint32_t index);
+bool controler_print_request(controler * this);
+void controler_clear_print_buffer(controler * this);
+void controler_build_bill(controler * this);
+uint32_t controler_get_print_counter(controler * this);
+static void controler_bill_header(controler * this);
+static void controler_bill_content(controler * this);
+static void controler_bill_footer(controler * this);
 static void controler_create_database_connection(controler * this);
 static void controler_add_order_item(controler * this, uint8_t ID);
 static void controler_build_sub_modules(controler * this);
-static bool controler_database_is_connected(controler * this);
 static void controler_finalize(controler * this);
+static bool controler_check_item_available_quantity(controler * this, uint8_t ID);
 
 user_management * user_management_new();
 void user_management_finalize(user_management * this);
@@ -508,12 +518,19 @@ void settings_finalize(settings * this);
 
 printer * printer_new();
 void printer_clear_buffer(printer * this);
-void printer_clear_print_counter(printer * this);
-void printer_increment_print_counter(printer * this);
 uint32_t printer_get_print_counter(printer * this);
-bool printer_print_equest(printer * this);
+bool printer_print_request(printer * this);
+void printer_add_blank_line(printer * this, uint8_t number);
+void printer_cut_paper(printer * this);
+void printer_put_bar_code(printer * this, uint8_t barcode_width, uint8_t barcode_height, char * barcode_data);
+void printer_set_justisfication(printer * this, uint8_t justisfication);
+void printer_add_order_item(printer * this, char * item_name, char * quantity, char * price_without_tax, char * price_with_tax);
+void printer_add_string(printer * this, char * string);
+void printer_line_feed_with_character(printer * this, char character, uint8_t char_number);
 void printer_finalize(printer * this);
-static void printer_replace_unsupported_characters(printer * this);
+void printer_replace_unsupported_characters(printer * this);
+static bool printer_print_request_platform_independent(printer * this);
+
 
 alarm_report * alarm_report_new(uint32_t alarm_code, const char * alarm_description);
 uint32_t alarm_report_get_code(alarm_report * this);
@@ -550,10 +567,11 @@ char * database_get_tcp_port(database * this);
 void database_disconnect(database * this);
 bool database_is_connected(database * this);
 void database_finalize(database * this);
+bool database_check_id_exists(database * this, uint8_t ID);
 uint32_t database_get_item_number_in_stock(database * this);
 uint32_t database_get_item_quantity(database * this, uint8_t ID);
-char * database_get_item_name(database * this, uint8_t ID);
-char * database_get_item_shortcut_name(database * this, uint8_t ID);
+c_string * database_get_item_name(database * this, uint8_t ID);
+c_string * database_get_item_shortcut_name(database * this, uint8_t ID);
 double database_get_item_tax(database * this, uint8_t ID);
 double database_get_item_price(database * this, uint8_t ID);
 bool database_set_item_quantity(database * this, uint8_t ID, uint32_t new_quantity);
@@ -569,8 +587,9 @@ double order_list_get_total_price_with_tax(order_list * this);
 void order_list_remove_by_index(order_list * this, uint32_t index);
 void order_list_clear(order_list * this);
 char * order_list_get_order_item_name_at_index(order_list * this, uint32_t index);
+char * order_list_get_order_item_shortcut_name_at_index(order_list * this, uint32_t index);
 uint32_t order_list_get_order_item_quantity_at_index(order_list * this, uint32_t index);
-double order_list_get_order_item_price_withou_tax_at_index(order_list * this, uint32_t index);
+double order_list_get_order_item_price_without_tax_at_index(order_list * this, uint32_t index);
 double order_list_get_order_item_price_with_tax_at_index(order_list * this, uint32_t index);
 void order_list_finalize(order_list * this);
 uint32_t order_list_find_order_by_ID(order_list * this, uint8_t ID);
@@ -916,10 +935,35 @@ void controler_build_sub_modules(controler * this)
 	this->alarm_buffer_ref = alarm_buffer_new();
 }
 
-
 bool controler_database_is_connected(controler * this)
 {
 	return database_is_connected(this->database_ref);
+}
+
+bool controler_check_database_connected(controler * this)
+{
+	if(database_is_connected(this->database_ref) == false)
+	{
+		alarm_buffer_set_error(this->alarm_buffer_ref,error_index_database_connection);
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
+
+bool controler_check_id_exists(controler * this, uint8_t ID)
+{
+	if(database_check_id_exists(this->database_ref, ID) == false)
+	{
+		alarm_buffer_set_error(this->alarm_buffer_ref, error_index_unknown_order_ID);
+		return false;
+	}
+	else
+	{
+		return true;
+	}
 }
 
 uint32_t controler_get_item_number_in_stock(controler * this)
@@ -932,32 +976,50 @@ void controler_update_order_list(controler * this, uint8_t ID)
 	uint32_t item_index = order_list_find_order_by_ID(this->order_list_ref, ID);
 
 	if(item_index != 0xffffffff)
-		order_list_increment_item_quantity_by_index(this->order_list_ref, item_index);
+		controler_increase_item_quantity_by_index(this, item_index);
 	else
 		controler_add_order_item(this, ID);
 }	
 
-static void controler_add_order_item(controler * this, uint8_t ID)
+static bool controler_check_item_available_quantity(controler * this, uint8_t ID)
 {
-	if(database_is_connected(this->database_ref) == true)
+	if(controler_get_item_quantity_by_ID(this, ID) > 0)
 	{
-		if(controler_get_item_quantity_by_ID(this, ID) > 0)
-		{
-			char * item_name = controler_get_item_name_by_ID(this, ID);
-			char * item_shortcut_name = controler_get_item_shortcut_name_by_ID(this, ID);
-			double price = controler_get_item_price_by_ID(this, ID);
-			double tax = controler_get_item_tax_by_ID(this, ID);
-
-			order_list_put_new_item_to_order_list(this->order_list_ref, ID, item_name, item_shortcut_name, price, tax);
-		}
-		else
-		{
-			alarm_buffer_set_warning(this->alarm_buffer_ref,warning_index_shortage_stock);
-		}
+		return true;
 	}
 	else
 	{
-		alarm_buffer_set_error(this->alarm_buffer_ref,error_index_database_connection);
+		alarm_buffer_set_warning(this->alarm_buffer_ref,warning_index_shortage_stock);
+		return false;
+	}
+}
+
+static void controler_add_order_item(controler * this, uint8_t ID)
+{
+	if(controler_check_database_connected(this))
+	{
+		if(controler_check_id_exists(this, ID))
+		{
+			if(controler_check_item_available_quantity(this, ID))
+			{
+				c_string * item_name = controler_get_item_name_by_ID(this, ID);
+				c_string * item_shortcut_name = controler_get_item_shortcut_name_by_ID(this, ID);
+
+
+				double price = controler_get_item_price_by_ID(this, ID);
+				double tax = controler_get_item_tax_by_ID(this, ID);
+	
+				order_list_put_new_item_to_order_list(this->order_list_ref, 
+									ID,
+									((item_name != NULL) ? c_string_get_char_array(item_name): ""),
+									((item_name != NULL) ? c_string_get_char_array(item_shortcut_name): ""),
+									price, 
+									tax);
+
+				c_string_finalize_v2(item_name);
+				c_string_finalize_v2(item_shortcut_name);
+			}
+		}
 	}
 }
 
@@ -988,7 +1050,7 @@ uint32_t controler_get_order_item_quantity_at_index(controler * this, uint32_t i
 
 double controler_get_order_item_price_withou_tax_at_index(controler * this, uint32_t index)
 {
-	return order_list_get_order_item_price_withou_tax_at_index(this->order_list_ref, index);
+	return order_list_get_order_item_price_without_tax_at_index(this->order_list_ref, index);
 }
 
 double controler_get_order_item_price_with_tax_at_index(controler * this, uint32_t index)
@@ -1021,7 +1083,7 @@ uint32_t controler_get_item_quantity_by_ID(controler * this, uint8_t ID)
 	return database_get_item_quantity(this->database_ref, ID);
 }
 
-char * controler_get_item_shortcut_name_by_ID(controler * this, uint8_t ID)
+c_string * controler_get_item_shortcut_name_by_ID(controler * this, uint8_t ID)
 {
 	return database_get_item_shortcut_name(this->database_ref, ID);
 }
@@ -1036,53 +1098,91 @@ double controler_get_item_tax_by_ID(controler * this, uint8_t ID)
 	return database_get_item_tax(this->database_ref, ID);
 }
 
-char * controler_get_item_name_by_ID(controler * this, uint8_t ID)
+c_string * controler_get_item_name_by_ID(controler * this, uint8_t ID)
 {
-	switch(ID)
+	return database_get_item_name(this->database_ref, ID);
+}
+
+bool controler_print_request(controler * this)
+{
+	if(printer_print_request(this->printer_ref) == false)
 	{
-		case 1:
-			return "mouka 1";
-		case 2: 
-			return "mouka 2";
-		case 3: 
-			return "mouka 3";
-		case 4:
-			return "mouka 4";
-		case 5:
-			return "mouka 5";
-		case 6:
-			return "mouka 6";
-		case 7:
-			return "mouka 7";
-		case 8:
-			return "mouka 8";
-		case 9:
-			return "mouka 9";
-		case 10:
-			return "mouka 10";
-		case 11: 
-			return "mouka 11";
-		case 12: 
-			return "mouka 12";
-		case 13:
-			return "mouka 13";
-		case 14:
-			return "mouka 14";
-		case 15:
-			return "mouka 15";
-		case 16:
-			return "mouka 16";
-		case 17:
-			return "mouka 17";
-		case 18:
-			return "mouka 18";
-		case 19:
-			return "mouka 19";
-		case 20:
-			return "mouka 20";
-		default:
-			return "";
+		alarm_buffer_set_error(this->alarm_buffer_ref, error_index_bill_print_error);
+		return false;
 	}
+	else
+	{
+		return true;
+	}
+}
+
+void controler_clear_print_buffer(controler * this)
+{
+	printer_clear_buffer(this->printer_ref);
+}
+
+static void controler_bill_header(controler * this)
+{
+	printer_add_blank_line(this->printer_ref, 3);
+	printer_add_string(this->printer_ref, "Michal Zuna");
+    printer_add_blank_line(this->printer_ref, 1);
+	printer_add_string(this->printer_ref, "Pod Zelenou cestou 1768");
+	printer_add_blank_line(this->printer_ref, 1);
+	printer_add_string(this->printer_ref, "511 01 Turnov");
+	printer_add_blank_line(this->printer_ref, 1);
+
+	printer_add_order_item(this->printer_ref, "Zboží", "Ks", "Cena" ,"S DPH");
+	printer_add_blank_line(this->printer_ref, 1);
+}
+
+static void controler_bill_footer(controler * this)
+{
+	char * sum_string = "Celkem Včetně DPH:";
+	char price_str[16];
+
+	sprintf(price_str,"%fKč" ,order_list_get_total_price_with_tax(this->order_list_ref));
+	
+	printer_line_feed_with_character(this->printer_ref, '-', 42);
+    printer_add_string(this->printer_ref, sum_string);
+		        
+	printer_line_feed_with_character(this->printer_ref, ' ', 42-strlen(sum_string)-strlen(price_str));
+	printer_add_string(this->printer_ref, price_str);
+			         
+	printer_add_blank_line(this->printer_ref, 3);
+	printer_cut_paper(this->printer_ref);
+}
+
+static void controler_bill_content(controler * this)
+{
+	for(int i = 0; i < order_list_size(this->order_list_ref); i++)
+	{
+		char * item_name = order_list_get_order_item_shortcut_name_at_index(this->order_list_ref, i);
+		char item_quantity[12];
+		char item_price_without_tax[12];
+		char item_price_with_tax[12];
+
+		sprintf(item_quantity, "%dKs", order_list_get_order_item_quantity_at_index(this->order_list_ref, i));
+		sprintf(item_price_without_tax, "%fKč", round(order_list_get_order_item_price_without_tax_at_index(this->order_list_ref, i)));
+		sprintf(item_price_with_tax, "%fKč", round(order_list_get_order_item_price_with_tax_at_index(this->order_list_ref, i)));
+
+		printer_add_order_item(this->printer_ref, item_name, item_quantity, item_price_without_tax, item_price_with_tax);
+	}
+}
+
+void controler_build_bill(controler * this)
+{
+	
+	controler_bill_header(this);
+	controler_bill_content(this);
+	controler_bill_footer(this);
+
+	printer_replace_unsupported_characters(this->printer_ref);
+}
+
+
+uint32_t controler_get_print_counter(controler * this)
+{
+	return printer_get_print_counter(this->printer_ref);
 }
 
 static void controler_create_database_connection(controler * this)
@@ -1162,41 +1262,128 @@ printer * printer_new()
 void printer_clear_buffer(printer * this)
 {
 	c_string_clear(this->print_buffer);
-}
-
-void printer_clear_print_counter(printer * this)
-{
 	this->print_counter = 0;
 }
 
-void printer_increment_print_counter(printer * this)
+#ifdef __linux__
+
+static bool printer_print_request_linux(char * print_buffer)
 {
-	this->print_counter ++;
+	FILE * printer_ref = fopen("/dev/usb/lp0", "w");
+
+	if(printer_ref != NULL)
+	{
+		fprintf(printer_ref, "%s", print_buffer);
+		fclose(printer_ref);
+		return true;
+	}
+	else
+	{
+		return false	
+	}
 }
 
-bool printer_print_equest(printer * this)
+#elif defined(_WIN32) || defined(_WIN64)
+
+static bool printer_print_request_win(char * print_buffer)
 {
-	printer_replace_unsupported_characters(this);
+	return false;
+}
 
+#endif
+
+static bool printer_print_request_platform_independent(printer * this)
+{
 	#ifdef __linux__
-		FILE * printer_ref = fopen("/dev/usb/lp0", "w");
-		if(printer_ref != NULL)
-		{
-			fprintf(printer_ref, "%s", c_string_get_char_array(this->print_buffer));
-			fclose(printer_ref);
-			return true;
-		}
-		else
-		{
-			return false	
-		}
-
+		return printer_print_request_linux(c_string_get_char_array(this->print_buffer));
 	#elif defined(_WIN32) || defined(_WIN64)
-		return false;
+		return printer_print_request_win(c_string_get_char_array(this->print_buffer));
 	#else
 		fprintf(stderr, "Unsupported platform!\n");
 		return false;
-	#endif	
+	#endif
+}
+
+
+bool printer_print_request(printer * this)
+{	
+	if(printer_print_request_platform_independent(this) == true)
+	{
+		this->print_counter++;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+void printer_add_blank_line(printer * this, uint8_t number)
+{
+	for(int i = 0; i<number; i++)
+	{
+	    c_string_add_char(this->print_buffer, ESC);
+		c_string_add_char(this->print_buffer,'d');
+		c_string_add_char(this->print_buffer, SOH);
+	}
+}
+
+void printer_cut_paper(printer * this)
+{
+	c_string_add_char(this->print_buffer, GS);
+	c_string_add_char(this->print_buffer, 'V');
+	c_string_add_char(this->print_buffer, ((char) 0x41));
+	c_string_add_char(this->print_buffer, ETX);
+}
+
+void printer_put_bar_code(printer * this,uint8_t barcode_width, uint8_t barcode_height, char * barcode_data)
+{
+	char buffer[32];
+	sprintf(buffer, "%cw%c%ch%c%ck%c%s%c",GS,(char) barcode_width, GS,(char)barcode_height,GS,EOT,barcode_data,NUL);
+
+	printer_set_justisfication(this, 1);
+    printer_add_string(this, buffer);
+	printer_add_blank_line(this, 1);
+	printer_add_string(this, barcode_data);
+}
+
+void printer_set_justisfication(printer * this, uint8_t justisfication)
+{
+	c_string_add_char(this->print_buffer, ESC);
+	c_string_add_char(this->print_buffer, 'a');
+	c_string_add_char(this->print_buffer, (char) justisfication);
+}
+
+void printer_add_order_item(printer * this, char * item_name, char * quantity, char * price_without_tax, char * price_with_tax)
+{
+	/* 42 znaků v jednom řádku */
+	printer_set_justisfication(this, 0);
+				        
+	printer_add_string(this, item_name);
+					        
+	printer_line_feed_with_character(this, ' ', 18-strlen(item_name));
+							        
+	printer_add_string(this, quantity);
+	printer_line_feed_with_character(this, ' ', 6-strlen(quantity));
+														        
+	printer_add_string(this, price_without_tax);
+														        
+	printer_line_feed_with_character(this, ' ', 18-strlen(price_with_tax)-strlen(price_without_tax));
+	printer_add_string(this, price_with_tax);
+	printer_add_blank_line(this, 1);
+}
+
+void printer_add_string(printer * this, char * string)
+{
+	c_string_concat(this->print_buffer, string);
+}
+
+void printer_line_feed_with_character(printer * this, char character, uint8_t char_number)
+{
+	for(int i = 0; i < char_number; i++)
+	{
+	    c_string_add_char(this->print_buffer, character);
+	}
 }
 
 uint32_t printer_get_print_counter(printer * this)
@@ -1204,7 +1391,7 @@ uint32_t printer_get_print_counter(printer * this)
 	return this->print_counter;
 }
 
-static void printer_replace_unsupported_characters(printer * this)
+void printer_replace_unsupported_characters(printer * this)
 {	
 	char * unsupported_characters = "ěščřžýáíéúůÉŠČŘŽÝÁÍÉÚÚ";
 	char * supported_characters = "escrzyaieuuESCRZYAIEUU";
@@ -1484,22 +1671,88 @@ void database_disconnect(database * this)
 
 uint32_t database_get_item_number_in_stock(database * this)
 {
-	return 20;
+	PGresult *res = PQexec(this->conn, "SELECT COUNT(*) FROM stock;");
+
+	if (PQresultStatus(res) == PGRES_TUPLES_OK)
+	{
+		uint32_t row_number = atoi( PQgetvalue(res, 0, 0)); 
+		PQclear(res);	
+		return row_number;
+	}
+	else
+	{
+		PQclear(res);
+		return 0;
+	}
 }
+
+bool database_check_id_exists(database * this, uint8_t ID)
+{
+	//select exists(select 1 from contact where id=12)
+	return true;
+}
+
 
 uint32_t database_get_item_quantity(database * this, uint8_t ID)
 {
-	return 0;
+	char sql_query[128];
+	sprintf(sql_query, "SELECT quantity FROM stock WHERE ID=%d;", ID);	
+
+	PGresult *res = PQexec(this->conn, sql_query);
+
+	if (PQresultStatus(res) == PGRES_TUPLES_OK)
+	{
+		uint32_t quantity = atoi( PQgetvalue(res, 0, 0)); 
+		PQclear(res);	
+		return quantity;
+	}
+	else
+	{
+		PQclear(res);
+		return 0;
+	}
 }
 
-char * database_get_item_name(database * this, uint8_t ID)
+c_string * database_get_item_name(database * this, uint8_t ID)
 {
-	return NULL;
+	char sql_query[128];
+	sprintf(sql_query, "SELECT itemname FROM stock WHERE ID=%d;", ID);	
+
+	PGresult *res = PQexec(this->conn, sql_query);
+
+	if (PQresultStatus(res) == PGRES_TUPLES_OK)
+	{
+		c_string * item_name = c_string_new_with_init(PQgetvalue(res, 0, 0)); 
+		
+		PQclear(res);	
+		return item_name;
+	}
+	else
+	{
+		PQclear(res);
+		return c_string_new();
+	}
 }
 
-char * database_get_item_shortcut_name(database * this, uint8_t ID)
+c_string * database_get_item_shortcut_name(database * this, uint8_t ID)
 {
-	return NULL;
+	char sql_query[128];
+	sprintf(sql_query, "SELECT itemshortcutname FROM stock WHERE ID=%d;", ID);	
+
+	PGresult *res = PQexec(this->conn, sql_query);
+
+	if (PQresultStatus(res) == PGRES_TUPLES_OK)
+	{
+		c_string * item_name = c_string_new_with_init(PQgetvalue(res, 0, 0)); 
+		
+		PQclear(res);	
+		return item_name;
+	}
+	else
+	{
+		PQclear(res);
+		return c_string_new();
+	}
 }
 
 double database_get_item_tax(database * this, uint8_t ID)
@@ -1666,6 +1919,16 @@ char * order_list_get_order_item_name_at_index(order_list * this, uint32_t index
 		return NULL;
 }
 
+char * order_list_get_order_item_shortcut_name_at_index(order_list * this, uint32_t index)
+{
+	order_item * item = order_list_get_order_item_by_index(this, index);
+
+	if(item != NULL)
+		return order_item_get_shortcut_name(item);
+	else
+		return NULL;
+}
+
 uint32_t order_list_get_order_item_quantity_at_index(order_list * this, uint32_t index)
 {
 	order_item * item = order_list_get_order_item_by_index(this, index);
@@ -1676,7 +1939,7 @@ uint32_t order_list_get_order_item_quantity_at_index(order_list * this, uint32_t
 		return 0;
 }
 
-double order_list_get_order_item_price_withou_tax_at_index(order_list * this, uint32_t index)
+double order_list_get_order_item_price_without_tax_at_index(order_list * this, uint32_t index)
 {
 	order_item * item = order_list_get_order_item_by_index(this, index);
 
@@ -1751,8 +2014,10 @@ order_item * order_item_new(uint8_t ID, char * item_name, char * item_shortcut_n
 	order_item * this = (order_item *) malloc(sizeof(order_item));
 
 	this->ID = ID;
-	this->item_name = item_name;
-	this->item_shortcut_name = item_shortcut_name;
+	this->item_name = (char*) malloc(sizeof(char)*(strlen(item_name)+1));
+	strcpy(this->item_name, item_name);
+	this->item_shortcut_name = (char*) malloc(sizeof(char)*(strlen(item_shortcut_name)+1));
+	strcpy(this->item_shortcut_name, item_shortcut_name);
 	this->item_price = item_price;
 	this->quantity = 1;
 	this->tax = tax;
@@ -1908,7 +2173,7 @@ void view_base_read_current_screen_geometry(view_base * this)
 
 void view_base_screen_set_label_markup_text(GtkWidget * label, const char * string, ...)
 {
-	char label_text[128];
+	char label_text[200];
 	va_list params;
 	va_start(params, string);
 
@@ -2012,10 +2277,7 @@ static gboolean view_cyclic_interupt(gpointer param)
 
 	view_base_redraw(this->view_base_ref);
 
-	if(controler_database_is_connected(this->controler_ref) == false)
-	{
-		alarm_buffer_set_error(view_base_get_alarm_baffer_ref(this->view_base_ref), error_index_database_connection);
-	}
+	controler_check_database_connected(this->controler_ref);
 
 	char number_buffer[16];
 	sprintf(number_buffer, "%d Kč", (int) round(controler_get_order_total_price_with_tax(this->controler_ref)));
@@ -2590,7 +2852,7 @@ void view_order_screen_signals(view_order_screen * this)
 	g_signal_connect(G_OBJECT(this->btn_pay), 
 			"clicked",
 			G_CALLBACK(view_order_screen_btn_pay_click_callback), 
-			this->base_screen_ref->view_base_ref);
+			this);
 
 	g_signal_connect(G_OBJECT(this->btn_increase_quantity), 
 			"clicked",
@@ -2645,7 +2907,12 @@ void view_order_screen_btn_decrease_quantity_click_callback(GtkWidget * widget, 
 
 void view_order_screen_btn_pay_click_callback(GtkWidget * widget, gpointer param)
 {
-	view_base_show_order_finish_screen((view_base*) param);
+	view_order_screen * this = (view_order_screen *) param;	
+	controler * controler_ref = view_base_screen_get_controler_reference(this->base_screen_ref);
+
+	//controler_build_bill(controler_ref);
+
+	view_base_show_order_finish_screen(this->base_screen_ref->view_base_ref);
 }
 
 void view_order_screen_btn_clear_order_click_callback(GtkWidget * widget, gpointer param)
@@ -2685,6 +2952,24 @@ void view_manual_input_screen_fill(view_manual_input_screen * this)
 {
 	controler * controler_ref = view_base_screen_get_controler_reference(this->base_screen_ref);
 
+	if(((this->page_index+1)*15) < controler_get_item_number_in_stock(controler_ref))
+	{
+		gtk_widget_set_sensitive(GTK_WIDGET(this->btn_next), TRUE);
+	}
+	else
+	{
+		gtk_widget_set_sensitive(GTK_WIDGET(this->btn_next), FALSE);
+	}
+
+	if(this->page_index > 0)
+	{
+		gtk_widget_set_sensitive(GTK_WIDGET(this->btn_prev), TRUE);
+	}
+	else
+	{
+		gtk_widget_set_sensitive(GTK_WIDGET(this->btn_prev), FALSE);
+	}
+
 	for(int i = 0; i < 3; i++)
 	{
 		for(int j = 0; j < 5; j++)
@@ -2696,15 +2981,22 @@ void view_manual_input_screen_fill(view_manual_input_screen * this)
 			{
 				gtk_widget_set_sensitive(button, TRUE);
 				GtkWidget * button_label = gtk_bin_get_child(GTK_BIN(button));
-				char * item_name = controler_get_item_name_by_ID(controler_ref, ID);
+				c_string * item_name = controler_get_item_name_by_ID(controler_ref, ID);
 				uint32_t item_quantity = controler_get_item_quantity_by_ID(controler_ref, ID);
+
+				
 
 				view_base_screen_set_label_markup_text(button_label, 
 									"<span font_desc=\"%d\"><b>%s</b></span>\n<span font_desc=\"%d\"><b>(%d)</b></span>",
 									20,
-									item_name,
+									c_string_get_char_array(item_name),
 									10,
 									item_quantity);
+
+				gtk_label_set_justify(GTK_LABEL(button_label), GTK_JUSTIFY_CENTER);
+
+				c_string_finalize_v2(item_name);
+
 			}
 			else
 			{
@@ -2730,8 +3022,6 @@ static void view_manual_input_screen_build_widgets(view_manual_input_screen * th
 		{
 			this->button_matrix[i][j] = view_base_screen_build_button(this->base_screen_ref, 150, 50);
 			gtk_widget_set_sensitive(GTK_WIDGET(this->button_matrix[i][j]), FALSE);
-			GtkWidget * button_label  = gtk_bin_get_child(GTK_BIN(this->button_matrix[i][j]));
-			gtk_label_set_justify(GTK_LABEL(button_label), GTK_JUSTIFY_CENTER);
 		}
 	}
 
@@ -2902,14 +3192,7 @@ static void view_manual_input_screen_btn_prev_click_callback(GtkWidget * widget,
 	view_manual_input_screen * this = (view_manual_input_screen *) param;
 
 	if(this->page_index > 0)
-	{
 		this->page_index --;
-		gtk_widget_set_sensitive(this->btn_next, TRUE);
-	}
-	else
-	{
-		gtk_widget_set_sensitive(this->btn_prev, FALSE);
-	}
 
 	view_manual_input_screen_fill(this);
 }
@@ -2934,15 +3217,8 @@ static void view_manual_input_screen_btn_next_click_callback(GtkWidget * widget,
 {
 	view_manual_input_screen * this = (view_manual_input_screen *) param;
 
-	if(this->page_index < controler_get_item_number_in_stock(view_base_screen_get_controler_reference(this->base_screen_ref)))
-	{
+	if((this->page_index*15) < controler_get_item_number_in_stock(view_base_screen_get_controler_reference(this->base_screen_ref)))
 		this->page_index ++;	
-		gtk_widget_set_sensitive(GTK_WIDGET(this->btn_prev), TRUE);
-	}
-	else
-	{
-		gtk_widget_set_sensitive(GTK_WIDGET(this->btn_next), FALSE);
-	}
 
 	view_manual_input_screen_fill(this);
 }
@@ -3342,7 +3618,7 @@ void view_order_finish_screen_signals(view_order_finish_screen * this)
 	g_signal_connect(G_OBJECT(this->btn_back),
 			"clicked",
 			G_CALLBACK(view_order_finish_screen_btn_back_click_callback),
-			this->base_screen_ref->view_base_ref);
+			this);
 
 	g_signal_connect(G_OBJECT(this->btn_finish),
 			"clicked",
@@ -3442,23 +3718,40 @@ void view_order_finish_screen_delete_digit_in_calculator_buffer(view_order_finis
 
 void view_order_finish_screen_btn_print_bill_click_callback(GtkWidget * widget, gpointer param)
 {
+	view_order_finish_screen * this = (view_order_finish_screen *) param;
+	controler * controler_ref = view_base_screen_get_controler_reference(this->base_screen_ref);
 
+	if(controler_print_request(controler_ref) == true)
+		gtk_widget_set_sensitive(GTK_WIDGET(this->btn_back), FALSE);
 }
 
 void view_order_finish_screen_btn_back_click_callback(GtkWidget * widget, gpointer param)
 {
-	view_base_show_order_screen((view_base *) param);
+	view_order_finish_screen * this = (view_order_finish_screen *) param;
+	controler * controler_ref = view_base_screen_get_controler_reference(this->base_screen_ref);
+
+	controler_clear_print_buffer(controler_ref);
+	this->calculator_register = 0;
+	view_base_show_order_screen(this->base_screen_ref->view_base_ref);
 }
 
 void view_order_finish_screen_btn_finish_click_callback(GtkWidget * widget, gpointer param)
 {
 	view_order_finish_screen * this = (view_order_finish_screen *) param;
-	view_base_show_order_screen(this->base_screen_ref->view_base_ref);
+	controler * controler_ref = view_base_screen_get_controler_reference(this->base_screen_ref);
 
+	if(controler_get_print_counter(controler_ref) == 0)
+		controler_print_request(controler_ref);
+
+	this->calculator_register = 0;
+
+	gtk_widget_set_sensitive(GTK_WIDGET(this->btn_back), TRUE);
 
 	controler_clear_order_list(view_base_screen_get_controler_reference(this->base_screen_ref));	
-}
+	controler_clear_print_buffer(controler_ref);
 
+	view_base_show_order_screen(this->base_screen_ref->view_base_ref);
+}
 
 void view_order_finish_screen_button_matrix_0x0_click_callback(GtkWidget * widget, gpointer param)
 {
@@ -4037,7 +4330,7 @@ void order_list_widget_draw_content(order_list_widget * this, cairo_t * cr)
 
 		char * order_name = order_list_get_order_item_name_at_index(this->source_order_list, i);
 		uint32_t quantity = order_list_get_order_item_quantity_at_index(this->source_order_list, i);
-		double price_without_tax = order_list_get_order_item_price_withou_tax_at_index(this->source_order_list, i);
+		double price_without_tax = order_list_get_order_item_price_without_tax_at_index(this->source_order_list, i);
 		double price_with_tax = order_list_get_order_item_price_with_tax_at_index(this->source_order_list, i);
 		char buffer[16];
 
