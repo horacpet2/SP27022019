@@ -45,6 +45,9 @@ Architekturua je rozdělena do čtiř částí (vrstev):
 moduly alarm buffer, alarm widget a alarm tvoří architekturu model-view-controler kde alarm buffer je model, alarm widget je view a alarm tvoří controler.
 
 
+běhové knihovny GTK pro windows:
+https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer
+
 
 Rezervované IP adresy:
 
@@ -106,11 +109,11 @@ vrátí počet záznamů v tabulce stock SELECT COUNT(*) FROM stock;
 * napojit systémový log 
 * napojit chybový log do chybového bufferu
 * napojit chybový buffer
-* napojení databáze
-* vytvořit strukturu databáze
 
 ** DONE **
 
+* napojení databáze
+* vytvořit strukturu databáze
 * generování kódu pro tisk účtenky
 * odesílání kódu účtenky do tiskárny
 * vytvořit rozhraní pro vyčítání parametrů položky objednávky z databáze (v controleru)	

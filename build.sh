@@ -9,14 +9,14 @@ MODULES="$MAIN"
 
 
 if [ $# -gt 0 ] && [ $1 = "-w" ]; then
-	PARAMS="-Wall -g -std=gnu11 -mwindows -o $OUTFILE"
+	PARAMS="-Wall -g -std=gnu11 -I"C:/msys64/mingw64/x86_64-w64-mingw32/include" -L"C:/msys64/mingw64/x86_64-w64-mingw32/lib" -mwindows -lwinspool -o $OUTFILE"
 else
 	PARAMS="-Wall -g -std=gnu11 -o $OUTFILE"
 fi
 
 
 clear 
-$($CC $PARAMS $MODULES $LIBS)
+$($CC $MODULES $PARAMS $LIBS)
 
 
 # spustí přeložený program pouze pokud byl překlad bez chyb
