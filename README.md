@@ -83,6 +83,9 @@ databázové tabulky:
 stock
 virtual_silo
 transactions
+transactions_for_send - transakce pro odeslání do EET v případě odpojení sítě (provedení pro možnost více připojených podkladních systémů, nutnost lokálního záznamu)
+
+
 
 
 ** postgres **
@@ -97,21 +100,35 @@ vytvoření databázové tabulky: CREATE TABLE jmeno_databaze(formát tabulky);
 
 (http://127.0.0.1:56642/browser/)
 
+pro nastavení připojení ke vzdáleným počítačům je třeba připsat do konfiguračního souboru: PostgreSQL/<Verze>Data/pg_hba.conf
+
+host	all		all		192.168.1.11/32	md5
+
+v souboru postgresql.conf
+je třeba nastavit listen_address = '*'
 
 vytvoří tabulku pro sklad: CREATE TABLE stock(ID int, itemName varchar(255), itemShorcutName varchar(255), quantity int, tax float, price float);
 vloží záznam do tabulky stock: INSERT INTO stock VALUES(1, 'Žitná mouka 5Kg', 'Žit m 5Kg', 100, 1.15, 55);
 vrátí počet záznamů v tabulce stock SELECT COUNT(*) FROM stock;
-
+UPDATE stock SET quantity=xxx WHERE ID=1;
 
 
 ** TODO **
 
-* napojit systémový log 
-* napojit chybový log do chybového bufferu
-* napojit chybový buffer
+* upravit propojení value_widgetu pro zobrazování ceny na obrazovce objednávky a na obrazovce dokončení objednávky
+* pozměnit vyčítání dat do karty manuální vstup, komunikace je pomalá a zpomaluje se celý systém
+* vytvořit kartu s potvrzením odeslání dat do systému EET
+* knihovna EET 
+* vytvořit kartu v grafickém rozhraní pro práci se systémovým nastavením
+* napojit systémové nastavení
 
 ** DONE **
 
+* pozměnit propojení pro vyčítání skladových položek do karty manuálního vstupu pro zrychlení programu
+* napojit vlákno pro sledování spojení se serverem
+* napojit chybový log do chybového bufferu
+* napojit chybový buffer
+* napojit systémový log 
 * napojení databáze
 * vytvořit strukturu databáze
 * generování kódu pro tisk účtenky
@@ -131,16 +148,28 @@ vrátí počet záznamů v tabulce stock SELECT COUNT(*) FROM stock;
 
 
 
+Špaldová celozrnná 26kč/kg bez dph
+otruby jedlé (místo 50 je 40kg) 5kč/kg bez dph
+otruby krmné pouze 40kg 2.50kč/kg bez dph
+
+
+na účtenku přidat webovou adresu, ič, dič, datum uzkutečnění zdanitelného plnění
+
+
+
 
 ** BUGS **
 
-BUG 001 - pád programu bez udání příčiny při přechodu na obrazovku platby
+BUG 001 - pád programu bez udání příčiny při přechodu na obrazovku platby - opraveno, chybné načítání parametrů pro order_item
 chyba se objevuje při stisknutí tlačítka Zaplatit. Ve volané obslužné funkci se vykonává generování kódu pro tiskánu, které bylo v nedávné době vytvořeno a implementováno, od této doby byl dvakrát zaznamenám pád programu. Chyba se pravděpodobně nachází uvnitř funkce  controler_build_bill.
 Tato funkce pracuje s neuplnými daty, protože databáze ještě není napojena, je možné, že k pádu dojde z důvodu chybného přístupu k neúplným datům, 
 Chyba se bude řešit až po napojení databáze a kompletních datech ve struktuře order_list, funkce je do té doby zakomentována
 
 
+BUG 002 - pokud se zadají dvě položky se stejným ID program spadne
 
+BUG 003 - při spuštění programu se aktivuje error chyba připojení k serverovému počítači, ale po vyresetování zmizí a už se neobjeví
+- opraveno - chyba byla způsobena chybou při hlášení chyb, spojení se neaktivovalo kvůli chybné konfigurace adresy a chyba se po vyresetování již nenahlásila
 
 
 
