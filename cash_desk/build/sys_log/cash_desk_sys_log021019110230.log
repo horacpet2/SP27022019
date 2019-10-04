@@ -1,8 +1,0 @@
-02.10.19 - 11:02:30 # Inicializace jádra...
-02.10.19 - 11:02:30 # Vlákno pro sledování připojení k serverovému počítači vytvořeno.
-02.10.19 - 11:02:31 # Zjišťování mnoství položek skladu
-02.10.19 - 11:02:31 # Dotazování na jméno položky s ID: 1
-02.10.19 - 11:02:31 # Dotazování na skladové množství položky s ID: 1
-02.10.19 - 11:02:32 # Dotazování celkové ceny obejednávky s daní
-02.10.19 - 11:02:33 # Dotazování celkové ceny obejednávky s daní
-02.10.19 - 11:02:34 # Destrukce objektu controler

@@ -920,7 +920,7 @@ int main(int argv, char ** argc)
 	controler * controler_ref = NULL;
 	view * view_ref = NULL;
 
-    	controler_ref = controler_new();
+    controler_ref = controler_new();
 
 	if(controler_ref != NULL)
 	{
